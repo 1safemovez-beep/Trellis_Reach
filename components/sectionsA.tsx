@@ -54,7 +54,7 @@ export function Board({ d, go }: { d: TeamData; go: (t: string) => void }) {
         ))}
       </div>
       <div className="grid2">
-        <div className="panel"><h3>Revenue by lead source</h3>{rev ? <Bars pairs={revBy} isMoney /> : <Empty>No closed income yet. Won leads show here by source.</Empty>}</div>
+        <div className="panel"><h3>Revenue by lead source</h3><Bars pairs={revBy} isMoney />{!rev && <p className="note">No closed income yet. Mark a lead Won and add its value to fill this graph.</p>}</div>
         <div className="panel"><h3>Coming up</h3><div className="cal">{up.length ? up.map((i, n) => <CalRow key={n} i={i} />) : <Empty>Nothing scheduled. Add calls in Calendar.</Empty>}</div></div>
       </div>
     </section>

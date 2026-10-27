@@ -63,8 +63,8 @@ export function Leads({ d }: { d: TeamData }) {
         ))}
       </div>
       <div className="grid2">
-        <div className="panel"><h3>Leads by source</h3>{total ? <Bars pairs={SOURCES.map((s) => [s, d.leads.filter((l) => l.source === s).length])} /> : <Empty>No leads yet.</Empty>}</div>
-        <div className="panel"><h3>Pipeline</h3>{total ? <Bars pairs={STAGES.map((s) => [s, st[s]])} /> : <Empty>No leads yet.</Empty>}</div>
+        <div className="panel"><h3>Leads by source</h3><Bars pairs={SOURCES.map((s) => [s, d.leads.filter((l) => l.source === s).length])} />{!total && <p className="note">No leads yet. Each Hivecast sign-up adds to this graph.</p>}</div>
+        <div className="panel"><h3>Pipeline</h3><Bars pairs={STAGES.map((s) => [s, st[s]])} /></div>
       </div>
       <div className="panel">
         <div className="row" style={{ justifyContent: "space-between", marginBottom: 8 }}>
