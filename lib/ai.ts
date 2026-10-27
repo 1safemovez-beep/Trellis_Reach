@@ -18,7 +18,14 @@ export async function ask(opts: { system: string; messages: Msg[]; quick?: boole
   if (!res.ok) {
     const text = await res.text();
     console.error("Anthropic error", res.status, text.slice(0, 300));
-    throw new Error(res.status === 429 ? "The AI is busy. Try again in a moment." : "The AI couldn't answer right now.");
+    // Plain-language reasons so the owner can fix setup without reading logs.
+    if (res.status === 401) throw new Error("The AI key is wrong (401). Check ANTHROPIC_API_KEY in Vercel, then redeploy.");
+    if (res.status === 403) throw new Error("This AI key isn't allowed to do that (403). Make a new key in the Anthropic console.");
+    if (res.status === 404 || /model/i.test(text) && res.status === 400) throw new Error(`The AI model name "${model}" isn't available (${res.status}). Set ANTHROPIC_MODEL and ANTHROPIC_MODEL_QUICK in Vercel, then redeploy.`);
+    if (/credit balance|billing/i.test(text)) throw new Error("The Anthropic account has no credits. Add credits in the Anthropic console under Billing.");
+    if (res.status === 429) throw new Error("The AI is busy. Try again in a moment.");
+    if (res.status === 529 || res.status >= 500) throw new Error("The AI service is overloaded right now. Try again in a minute.");
+    throw new Error(`The AI couldn't answer (${res.status}).`);
   }
   const json = await res.json();
   return (json.content || []).filter((b: any) => b.type === "text").map((b: any) => b.text).join("");
