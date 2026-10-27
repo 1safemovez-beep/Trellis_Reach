@@ -1,5 +1,6 @@
 "use client";
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
+import { MicButton, speak, speechSupported, stopSpeaking, useListen } from "./voice";
 import { api, supabase } from "@/lib/supabaseClient";
 import { BUSINESSES, CONTENT_FORMATS, PROFILE_SLOTS, SOURCES, VIDEO_MODES } from "@/lib/constants";
 import type { TeamData } from "@/lib/useTeamData";
@@ -70,19 +71,40 @@ export function Chef({ d }: { d: TeamData }) {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [talk, setTalk] = useState(false);
+  const talkRef = useRef(false);
+  talkRef.current = talk;
+  const chatRef = useRef(chat);
+  chatRef.current = chat;
+  const fieldsRef = useRef(fields);
+  fieldsRef.current = fields;
+  const listen = useListen((spoken) => sendText(spoken));
 
-  async function send(e: FormEvent) {
-    e.preventDefault();
-    const t = input.trim();
+  async function sendText(t: string) {
+    t = t.trim();
     if (!t) return setErr("Type or speak an answer first.");
     setErr(""); setInput(""); setBusy(true);
-    const history = [...chat, { role: "me" as const, text: t }];
+    const history = [...chatRef.current, { role: "me" as const, text: t }];
     setChat(history);
     try {
-      const r = await api("/api/agents/chef", { history, fields });
+      const r = await api("/api/agents/chef", { history, fields: fieldsRef.current });
       setFields((f) => ({ ...f, ...r.fields }));
       setChat((c) => [...c, { role: "ai", text: r.reply }]);
+      if (talkRef.current) {
+        await speak(r.reply);            // Chef answers out loud…
+        if (talkRef.current && !r.done) listen.start(); // …then listens for the next answer
+      }
     } catch (x: any) { setErr(x.message); } finally { setBusy(false); }
+  }
+
+  function send(e: FormEvent) { e.preventDefault(); sendText(input); }
+
+  async function toggleTalk() {
+    if (talk) { setTalk(false); stopSpeaking(); listen.stop(); return; }
+    if (!speechSupported()) return setErr("This browser can't listen. Use Chrome, Edge or Safari, or tap the mic on your keyboard.");
+    setTalk(true); talkRef.current = true;
+    await speak(chatRef.current[chatRef.current.length - 1]?.text || "");
+    if (talkRef.current) listen.start();
   }
 
   async function save() {
@@ -94,16 +116,23 @@ export function Chef({ d }: { d: TeamData }) {
 
   return (
     <section className="view">
-      <Head eyebrow="Agent 1 · Marketing Chef" title="Tell the Chef about your business" lead="The Chef asks one question at a time and fills every field for you. To talk instead of type, tap the microphone on your keyboard." />
+      <Head eyebrow="Agent 1 · Marketing Chef" title="Talk to the Chef about your business" lead="Tap Start talking. The Chef asks one question at a time out loud, listens to your answer, and fills every field for you. Type only to fix a misheard word." />
       <div className="grid2">
         <div className="panel">
+          <div className="row" style={{ marginBottom: 10 }}>
+            <button type="button" className={"btn " + (talk ? "honey" : "primary")} onClick={toggleTalk} style={{ fontSize: 16, padding: "12px 18px" }}>
+              {talk ? (listen.listening ? "● Listening… tap to stop" : busy ? "Thinking…" : "Speaking… tap to stop") : "🎤 Start talking"}
+            </button>
+            {listen.interim && <span className="note">{listen.interim}</span>}
+          </div>
+          {listen.error && <p className="err">{listen.error}</p>}
           <div className="chat" aria-live="polite">{chat.map((m, i) => <div key={i} className={`msg ${m.role}`}>{m.text}</div>)}</div>
           <form className="row" onSubmit={send} style={{ marginTop: 10 }}>
-            <input id="chef-in" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Answer the Chef…" autoComplete="off" style={{ flex: 1, minWidth: 0 }} />
-            <button className="btn primary" disabled={busy}>{busy ? "…" : "Send"}</button>
+            <input id="chef-in" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Or type here to correct…" autoComplete="off" style={{ flex: 1, minWidth: 0 }} />
+            <button className="btn" disabled={busy}>{busy ? "…" : "Send"}</button>
           </form>
           {err && <p className="err">{err}</p>}
-          <button className="btn small" type="button" style={{ marginTop: 8 }} onClick={() => { setChat([CHEF_HELLO]); setFields({}); }}>Start over</button>
+          <button className="btn small" type="button" style={{ marginTop: 8 }} onClick={() => { setTalk(false); stopSpeaking(); listen.stop(); setChat([CHEF_HELLO]); setFields({}); }}>Start over</button>
         </div>
         <div className="panel">
           <h3>Business profile</h3>
@@ -168,8 +197,12 @@ export function Create({ d }: { d: TeamData }) {
             <label style={{ display: "flex", gap: 8, fontWeight: 400 }}><input id="cr-consent" type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ width: "auto" }} /> This is me, or I have written permission from the person in the photo.</label>
             <p className="note" style={{ margin: 0 }}>The photo is sent to the AI video plug-in once it's connected.</p>
           </>)}
-          {mode === "describe" && <label>Describe the video<textarea id="cr-desc" value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="A confident founder in a bright studio, upbeat, 30 seconds" /></label>}
+          {mode === "describe" && (<>
+            <label>Describe the video<textarea id="cr-desc" value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="A confident founder in a bright studio, upbeat, 30 seconds" /></label>
+            <MicButton label="Describe it out loud" onText={(t) => setDesc((v) => (v ? v + " " : "") + t)} />
+          </>)}
           <label>Your vision (optional)<textarea id="cr-vision" value={vision} onChange={(e) => setVision(e.target.value)} placeholder="Wardrobe, setting, mood, anything you want in it" /></label>
+          <MicButton label="Say your vision" onText={(t) => setVision((v) => (v ? v + " " : "") + t)} />
           <div className="row"><button className="btn primary" type="button" onClick={go} disabled={busy}>{busy ? "Writing…" : "Create it"}</button>{err && <span className="err">{err}</span>}</div>
         </div>
         <div className="panel">

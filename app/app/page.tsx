@@ -13,14 +13,23 @@ const TABS = [
 
 // Team dashboard. Requires a signed-in team member; row level security enforces the same rule on the database.
 export default function Dashboard() {
-  const [status, setStatus] = useState<"checking" | "out" | "in">("checking");
+  const [status, setStatus] = useState<"checking" | "out" | "notTeam" | "in">("checking");
+  const [myEmail, setMyEmail] = useState("");
   const [tab, setTab] = useState("board");
   const d = useTeamData(status === "in");
 
   useEffect(() => {
     const db = supabase();
-    db.auth.getSession().then(({ data }) => setStatus(data.session ? "in" : "out"));
-    const { data: sub } = db.auth.onAuthStateChange((_e, s) => setStatus(s ? "in" : "out"));
+    // Signed in is not enough: the email must be on the team list, or every table reads as empty.
+    async function check(session: any) {
+      if (!session) return setStatus("out");
+      const email = String(session.user?.email || "").toLowerCase();
+      setMyEmail(email);
+      const { data } = await db.from("team_members").select("email").eq("email", email).maybeSingle();
+      setStatus(data ? "in" : "notTeam");
+    }
+    db.auth.getSession().then(({ data }) => check(data.session));
+    const { data: sub } = db.auth.onAuthStateChange((_e, s) => { check(s); });
     try { const t = localStorage.getItem("tr-tab"); if (t) setTab(t); } catch {}
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -31,6 +40,21 @@ export default function Dashboard() {
     try { localStorage.setItem("tr-tab", t); } catch {}
     window.scrollTo(0, 0);
   }
+
+  if (status === "notTeam") return (
+    <main className="wrap">
+      <div className="login panel">
+        <h2>Almost there</h2>
+        <p>You're signed in as <b>{myEmail}</b>, but this email isn't on the team list yet.</p>
+        <p className="note">Owner: in Supabase, open SQL Editor → New query, paste this line and click Run. Then reload this page.</p>
+        <pre className="out" style={{ whiteSpace: "pre-wrap", userSelect: "all" }}>{`insert into team_members (email, role) values ('${myEmail}', 'owner');`}</pre>
+        <div className="row">
+          <button className="btn primary" onClick={() => window.location.reload()}>I've added it, reload</button>
+          <button className="btn small" onClick={() => supabase().auth.signOut()}>Sign out</button>
+        </div>
+      </div>
+    </main>
+  );
 
   if (status !== "in") return <main className="wrap"><p className="note" style={{ paddingTop: 40 }}>Loading…</p></main>;
 

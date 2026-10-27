@@ -2,36 +2,98 @@
 import { FormEvent, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
-// Passwordless sign-in: the team member gets a one-time link by email.
+// Team sign-in. Two ways in:
+//  1. Email code: Supabase emails a link and a 6-digit code (type the code here).
+//  2. Password: for accounts created in Supabase → Authentication → Users → Add user.
 export default function Login() {
-  const [sent, setSent] = useState(false);
+  const [mode, setMode] = useState<"code" | "password">("code");
+  const [step, setStep] = useState<"email" | "verify">("email");
+  const [email, setEmail] = useState("");
+  const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  async function submit(e: FormEvent<HTMLFormElement>) {
+  function explain(e: any): string {
+    const m = String(e?.message || e || "");
+    if (/not authorized/i.test(m)) return "Supabase's built-in email only sends to the email you use for your Supabase account. Use that email, or sign in with a password instead.";
+    if (/rate limit|too many/i.test(m)) return "Too many emails sent in the last hour. Wait a bit, or sign in with a password instead.";
+    if (/not configured|isn't configured/i.test(m)) return "The site's Supabase keys aren't set. Check /api/health.";
+    if (/invalid login|invalid credentials/i.test(m)) return "Email or password is wrong.";
+    if (/email not confirmed/i.test(m)) return "This account isn't confirmed yet. In Supabase, open the user and confirm them, or tick Auto Confirm when adding.";
+    if (/token has expired|invalid/i.test(m)) return "That code didn't work or has expired. Send a new one.";
+    return m || "Something went wrong. Try again.";
+  }
+
+  async function sendCode(e: FormEvent) {
     e.preventDefault();
-    setErr("");
-    const email = String(new FormData(e.currentTarget).get("email") || "").trim().toLowerCase();
-    const { error } = await supabase().auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/app`, shouldCreateUser: true },
-    });
-    if (error) setErr(error.message); else setSent(true);
+    setErr(""); setMsg(""); setBusy(true);
+    try {
+      const { error } = await supabase().auth.signInWithOtp({
+        email: email.trim().toLowerCase(),
+        options: { emailRedirectTo: `${window.location.origin}/app`, shouldCreateUser: true },
+      });
+      if (error) throw error;
+      setStep("verify");
+      setMsg("Sent. Check your inbox and spam folder. Tap the link, or type the 6-digit code below.");
+    } catch (x) { setErr(explain(x)); } finally { setBusy(false); }
+  }
+
+  async function verify(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const token = String(new FormData(e.currentTarget).get("code") || "").replace(/\s/g, "");
+    setErr(""); setBusy(true);
+    try {
+      const { error } = await supabase().auth.verifyOtp({ email: email.trim().toLowerCase(), token, type: "email" });
+      if (error) throw error;
+      window.location.href = "/app";
+    } catch (x) { setErr(explain(x)); } finally { setBusy(false); }
+  }
+
+  async function withPassword(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const password = String(new FormData(e.currentTarget).get("password") || "");
+    setErr(""); setBusy(true);
+    try {
+      const { error } = await supabase().auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
+      if (error) throw error;
+      window.location.href = "/app";
+    } catch (x) { setErr(explain(x)); } finally { setBusy(false); }
   }
 
   return (
     <main className="wrap">
       <div className="login panel">
         <div className="brand"><div className="logo">TR</div><div><h1>Trellis Reach</h1><small>Team sign in</small></div></div>
-        {sent ? (
-          <p>Check your email for a sign-in link. You can close this tab.</p>
-        ) : (
-          <form className="form" onSubmit={submit}>
-            <label>Email<input id="login-email" name="email" type="email" required autoComplete="email" /></label>
-            <button className="btn primary">Email me a sign-in link</button>
-            {err && <p className="err">{err}</p>}
-            <p className="note">Only people on the team list can open the dashboard.</p>
+        <div className="row">
+          <button type="button" className={"btn small" + (mode === "code" ? " primary" : "")} onClick={() => { setMode("code"); setErr(""); }}>Email code</button>
+          <button type="button" className={"btn small" + (mode === "password" ? " primary" : "")} onClick={() => { setMode("password"); setErr(""); }}>Password</button>
+        </div>
+        <label>Email<input id="login-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+
+        {mode === "code" && step === "email" && (
+          <form className="form" onSubmit={sendCode}>
+            <button className="btn primary" disabled={busy || !email}>{busy ? "Sending…" : "Email me a sign-in code"}</button>
           </form>
         )}
+        {mode === "code" && step === "verify" && (
+          <form className="form" onSubmit={verify}>
+            <label>6-digit code<input id="login-code" name="code" inputMode="numeric" autoComplete="one-time-code" maxLength={10} required /></label>
+            <div className="row">
+              <button className="btn primary" disabled={busy}>Sign in</button>
+              <button type="button" className="btn small" onClick={() => { setStep("email"); setMsg(""); }}>Send a new code</button>
+            </div>
+          </form>
+        )}
+        {mode === "password" && (
+          <form className="form" onSubmit={withPassword}>
+            <label>Password<input id="login-pass" name="password" type="password" required autoComplete="current-password" /></label>
+            <button className="btn primary" disabled={busy || !email}>Sign in</button>
+          </form>
+        )}
+
+        {msg && <p className="note">{msg}</p>}
+        {err && <p className="err">{err}</p>}
+        <p className="note">The dashboard opens for emails on the team list. Owners add people in Supabase.</p>
       </div>
     </main>
   );

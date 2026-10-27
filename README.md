@@ -51,9 +51,34 @@ You need four free or low-cost accounts, all in your own name: GitHub (you have 
 
 To use a subdomain instead, add `reach.qvtrellis.net` in step 1 and use that address everywhere above.
 
-### 5. First sign-in
+### 5. First sign-in (password, recommended)
 
-Go to `https://qvtrellis.net/login`, enter the email you added as owner, and click the link that arrives. To add teammates, insert their emails into `team_members` with a role such as `member`, `closer` or `creator`.
+1. In Supabase, go to **Authentication → Users → Add user → Create new user**. Enter your email and a strong password, tick **Auto Confirm User**, and click Create.
+2. Make sure that same email is on the team list (step 1.3 above).
+3. Go to `https://qvtrellis.net/login`, choose **Password**, and sign in.
+
+To add teammates: create them as users the same way, and insert their emails into `team_members` with a role such as `member`, `closer` or `creator`.
+
+### Check your setup
+
+Open `https://qvtrellis.net/api/health`. Every line should say `true`. If one says `false`:
+
+| Line | Fix |
+| --- | --- |
+| `supabaseUrl`, `supabaseAnonKey`, `supabaseServiceKey`, `anthropicKey` | Add that key in Vercel → Settings → Environment Variables, then **Redeploy**. |
+| `schemaInstalled` | Run `supabase/schema.sql` in the Supabase SQL Editor. |
+| `teamHasOwner` | Run the `insert into team_members …` line with your email. |
+
+### Email sign-in codes
+
+Supabase's built-in email only sends to the email on your Supabase account, and only 2 emails per hour. That's why codes may not arrive. For the team, use password sign-in. To send codes to anyone:
+
+1. Connect a sender in **Authentication → Emails → SMTP Settings** (Resend works well; use your qvtrellis.net address).
+2. In **Authentication → Emails → Templates → Magic Link**, add `{{ .Token }}` to the message so the email shows the 6-digit code.
+
+## Voice
+
+The Chef has a hands-free **Start talking** mode: it asks questions out loud, listens, and fills in the profile. Hivecast visitors can tap **Talk to fill this in**, and there are mic buttons on the other writing fields. Voice uses the browser's own speech recognition, so it works in Chrome, Edge and Safari (including iPhone), but not Firefox. The first time, the browser asks for microphone permission.
 
 ---
 

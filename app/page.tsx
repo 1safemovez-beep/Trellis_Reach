@@ -1,6 +1,7 @@
 "use client";
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import { BUSINESSES, PATHS, SOURCES } from "@/lib/constants";
+import { MicButton } from "@/components/voice";
 
 // Public Hivecast funnel. Visitors are not signed in; everything goes through /api/leads and /api/qa.
 async function post(path: string, body: unknown, method = "POST") {
@@ -19,6 +20,23 @@ export default function Hivecast() {
   const [q, setQ] = useState("");
   const [answer, setAnswer] = useState("");
   const path = PATHS.find((p) => p.id === pathId);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [fillNote, setFillNote] = useState("");
+
+  // Voice fill: the visitor talks, the AI fills the form, the visitor checks it and submits.
+  async function fillFromVoice(said: string) {
+    setFillNote("Filling in your answers…"); setErr("");
+    try {
+      const r = await post("/api/fill", { said });
+      if (r.pathId) setPathId(r.pathId);
+      const f = formRef.current;
+      if (f) for (const k of ["business", "name", "email", "phone", "source", "goal"]) {
+        const el = f.elements.namedItem(k) as HTMLInputElement | HTMLSelectElement | null;
+        if (el && r[k]) el.value = r[k];
+      }
+      setFillNote("Done. Check everything, fix any misheard words, then tap See my next step.");
+    } catch (x: any) { setFillNote(""); setErr(x.message); }
+  }
 
   async function keepPosted(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -79,7 +97,13 @@ export default function Hivecast() {
           )}
           {view === "kept" && <div className="panel"><h3>You're on the list</h3><p className="note">Expect one useful email at a time. Unsubscribe whenever you like.</p></div>}
           {view === "qual" && (
-            <form className="form" onSubmit={qualify}>
+            <form className="form" onSubmit={qualify} ref={formRef}>
+              <div className="panel" style={{ display: "grid", gap: 6, background: "var(--honey-soft)", borderColor: "var(--honey)" }}>
+                <b>Rather talk than type?</b>
+                <span className="note">Tap the mic and say who you are, what business this is about, your name, email, and your main goal. We'll fill it all in.</span>
+                <MicButton label="Talk to fill this in" onText={fillFromVoice} />
+                {fillNote && <span className="note">{fillNote}</span>}
+              </div>
               <h3>1. Who are you?</h3>
               <div className="paths">
                 {PATHS.map((p) => (
@@ -132,6 +156,7 @@ export default function Hivecast() {
             <input id="qa-in" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ask a question…" style={{ flex: 1, minWidth: 0 }} />
             <button className="btn primary">Ask</button>
           </form>
+          <div style={{ marginTop: 8 }}><MicButton label="Ask out loud" onText={(t) => setQ(t)} /></div>
           {answer && <div className="out" style={{ marginTop: 10 }}>{answer}</div>}
         </div>
         <div className="panel">

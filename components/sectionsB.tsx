@@ -5,6 +5,7 @@ import { BUSINESSES, LEVELS, PATHS, SOURCES, STAGES } from "@/lib/constants";
 import type { TeamData } from "@/lib/useTeamData";
 import { Bars, copyText, Empty, Head, money, useToast, when } from "./ui";
 import { calItems, CalRow, stats } from "./sectionsA";
+import { MicButton } from "./voice";
 
 async function exportExcel(d: TeamData) {
   const ExcelJS = (await import("exceljs")).default;
@@ -144,6 +145,7 @@ export function FollowUp({ d }: { d: TeamData }) {
           <label>Lead<select id="fu-lead" value={leadId} onChange={(e) => setLeadId(e.target.value)}>{d.leads.length ? d.leads.map((l) => <option key={l.id} value={l.id}>{l.name} · {l.stage}</option>) : <option value="">No leads yet</option>}</select></label>
           <label>Channel<select id="fu-chan" value={channel} onChange={(e) => setChannel(e.target.value)}><option>Email</option><option>SMS</option><option>AI phone script</option></select></label>
           <label>Anything to add?<textarea id="fu-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. They asked about yearly pricing" /></label>
+          <MicButton label="Say a note" onText={(t) => setNote((v) => (v ? v + " " : "") + t)} />
           <div className="row"><button className="btn primary" type="button" onClick={go} disabled={busy || !leadId}>{busy ? "Drafting…" : "Draft follow-up"}</button>{err && <span className="err">{err}</span>}</div>
           <p className="note">Texts and calls only go to leads who gave consent. Sending switches on with the Twilio and email plug-ins.</p>
         </div>
