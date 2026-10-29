@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { BUSINESSES, CALL_CONSENT_TEXT, CLIENT_CONSENT_PROMISE, CLIENT_SERVICES, LEVELS, PATHS, SOURCES } from "@/lib/constants";
+import { BUSINESSES, CALL_CONSENT_TEXT, CLIENT_CONSENT_PROMISE, CLIENT_SERVICES, LEVELS, PATHS, READINESS_AUTH_TEXT, SOURCES } from "@/lib/constants";
 import { clean, fail, rateLimited, supabaseAdmin } from "@/lib/server";
 
 // Public lead capture for the Hivecast funnel. Visitors are not signed in, so this route
@@ -36,10 +36,13 @@ export async function POST(req: Request) {
     const services = (Array.isArray(b.services) ? b.services : []).filter((x: string) => CLIENT_SERVICES.includes(x));
     if (!services.length) return fail("Pick at least one service.");
     if (!b.agree) return fail("Please agree to the client terms.");
-    if (services.some((x: string) => /call|booking/i.test(x)) && !b.customerConsent) return fail("Please confirm your customers agree before AI calls them.");
+    if (services.some((x: string) => /AI phone|booking/i.test(x)) && !b.customerConsent) return fail("Please confirm your customers agree before AI calls them.");
+    const wantsReadiness = services.some((x: string) => /readiness/i.test(x));
+    if (wantsReadiness && !b.readinessAuth) return fail("Please give permission to test your systems for the readiness check.");
     notes.push(`Client sign-up: ${company}${clean(b.industry, 80) ? ` (${clean(b.industry, 80)})` : ""}${clean(b.site, 200) ? ` · ${clean(b.site, 200)}` : ""}`,
       `Services: ${services.join(", ")}`, `Agreed to client terms ${now}`);
     if (b.customerConsent) notes.push(`Promised ${now}: "${CLIENT_CONSENT_PROMISE}"`);
+    if (wantsReadiness) notes.push(`Testing permission given ${now}: "${READINESS_AUTH_TEXT}" NEXT STEP: agree in writing on scope and dates before any testing.`);
     if (consent && phone) notes.push(consentNote("client sign-up"));
     row = { name: `${clean(b.name, 120) || email.split("@")[0]} · ${company}`, email, phone: phone || null, business: "QVTrellis builds",
       path: "High-stakes client / business", source, stage: "New", goal: clean(b.goal, 500) || null,

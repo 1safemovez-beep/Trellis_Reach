@@ -98,3 +98,7 @@ export const CLIENT_SERVICES = [
 ];
 export const CLIENT_CONSENT_PROMISE =
   "My customers only get AI calls or texts after they agree first, through my Trellis Reach sign-up form or with written consent I can show. I won't upload lists of people who didn't agree.";
+
+// Permission to test a client's systems and bots. Required before any readiness check.
+export const READINESS_AUTH_TEXT =
+  "I own these systems and bots or am authorized to approve testing them. I give QVTrellis permission to review and test them for the readiness check (security setup, exposed keys, and whether bots and AI do what they should). Nothing is tested until we agree in writing on exactly what's included and when. I can pause or cancel testing at any time.";

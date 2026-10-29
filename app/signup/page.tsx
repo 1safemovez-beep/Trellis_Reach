@@ -1,6 +1,6 @@
 "use client";
 import { FormEvent, useState } from "react";
-import { CALL_CONSENT_TEXT, CALLER, CLIENT_CONSENT_PROMISE, CLIENT_SERVICES, SOURCES } from "@/lib/constants";
+import { CALL_CONSENT_TEXT, CALLER, CLIENT_CONSENT_PROMISE, CLIENT_SERVICES, READINESS_AUTH_TEXT, SOURCES } from "@/lib/constants";
 
 // Client sign-up: a business owner picks the services they want, including AI calls and booking.
 export default function ClientSignup() {
@@ -8,7 +8,8 @@ export default function ClientSignup() {
   const [done, setDone] = useState(false);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
-  const wantsCalls = services.some((s) => /call|booking/i.test(s));
+  const wantsCalls = services.some((s) => /AI phone|booking/i.test(s));
+  const wantsReadiness = services.some((s) => /readiness/i.test(s));
   const toggle = (s: string) => setServices((v) => (v.includes(s) ? v.filter((x) => x !== s) : [...v, s]));
 
   async function submit(e: FormEvent<HTMLFormElement>) {
@@ -21,7 +22,7 @@ export default function ClientSignup() {
         body: JSON.stringify({
           kind: "client-signup", company: f.get("company"), name: f.get("name"), email: f.get("email"), phone: f.get("phone"),
           site: f.get("site"), industry: f.get("industry"), goal: f.get("goal"), source: f.get("source"), services,
-          agree: f.get("agree") === "on", customerConsent: f.get("customerConsent") === "on", consent: f.get("consent") === "on", website: f.get("website"),
+          agree: f.get("agree") === "on", readinessAuth: f.get("readinessAuth") === "on", customerConsent: f.get("customerConsent") === "on", consent: f.get("consent") === "on", website: f.get("website"),
         }),
       });
       const j = await res.json().catch(() => ({}));
@@ -55,6 +56,7 @@ export default function ClientSignup() {
               {CLIENT_SERVICES.map((s) => <label key={s}><input type="checkbox" checked={services.includes(s)} onChange={() => toggle(s)} />{s}</label>)}
             </div>
             <div className="checks">
+              {wantsReadiness && <label><input type="checkbox" name="readinessAuth" required /><span><b>Required for the readiness check:</b> {READINESS_AUTH_TEXT}</span></label>}
               {wantsCalls && <label><input type="checkbox" name="customerConsent" required /><span><b>Required for AI calls:</b> {CLIENT_CONSENT_PROMISE}</span></label>}
               <label><input type="checkbox" name="agree" required /><span>I agree that {CALLER.company} sets this up with AI, that every AI call says it's an AI and offers "press 1 to opt out", and that a person handles anything the AI can't.</span></label>
               <label><input type="checkbox" name="consent" /><span>Optional, for me: {CALL_CONSENT_TEXT}</span></label>
