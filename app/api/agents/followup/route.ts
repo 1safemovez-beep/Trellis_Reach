@@ -24,7 +24,8 @@ ${COMPLIANCE_RULES}
 JSON shape: {"subject": string (empty unless email), "message": string, "nextStep": string, "suggestedStage": one of ${JSON.stringify(STAGES)}}`,
       messages: [{
         role: "user",
-        content: `Business name for the opening line: ${lead.business || "QVTrellis"}
+        content: `App or business name for the opening line: ${lead.business && lead.business !== "Undecided" ? lead.business : "QVTrellis"}
+Reason for the call (use in the second sentence): ${(lead.notes || "").includes("Call requested") ? "they asked for a call on Hivecast" : `they signed up on Hivecast${lead.goal ? ` about: ${lead.goal}` : ""}${lead.path ? ` as ${lead.path}` : ""}`}
 Lead: ${JSON.stringify({ name: lead.name, business: lead.business, path: lead.path, stage: lead.stage, goal: lead.goal, notes: lead.notes })}
 Owner's note: ${clean(b?.note, 1000) || "none"}`,
       }],
