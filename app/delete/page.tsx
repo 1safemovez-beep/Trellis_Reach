@@ -35,7 +35,7 @@ export default function DeleteMyData() {
             <div className="row"><button className="btn danger" disabled={busy}>{busy ? "Sending…" : "Delete my information"}</button>{err && <span className="err">{err}</span>}</div>
           </form>
         )}
-        <p className="note" style={{ margin: 0 }}>Only want fewer messages? <a href="/optout">Opt out instead</a>. Team members can delete their account in the app under Settings. · <a href="/">Back to Hivecast</a></p>
+        <p className="note" style={{ margin: 0 }}>Only want fewer messages? <a href="/optout">Opt out instead</a>. Team members can delete their account in the app under Settings. Questions? <a href={`mailto:${CALLER.email}`}>{CALLER.email}</a> · <a href="/">Back to Hivecast</a></p>
       </div>
     </main>
   );

@@ -84,6 +84,7 @@ export const CALLER = {
   aiName: process.env.NEXT_PUBLIC_AI_CALLER_NAME || "Reach",
   company: "QVTrellis",
   phone: process.env.NEXT_PUBLIC_COMPANY_PHONE || "",
+  email: process.env.NEXT_PUBLIC_COMPANY_EMAIL || "qvtrellis@gmail.com",
   optOutUrl: (process.env.NEXT_PUBLIC_SITE_URL || "https://qvtrellis.net") + "/optout",
 };
 export const OPTED_OUT = "OPTED OUT";

@@ -65,7 +65,7 @@ export default function ClientSignup() {
             <div className="row"><button className="btn honey" disabled={busy}>{busy ? "Signing up…" : "Sign up"}</button>{err && <span className="err">{err}</span>}</div>
           </form>
         )}
-        <p className="note" style={{ margin: 0 }}>{CALLER.company}{CALLER.phone ? ` · ${CALLER.phone}` : ""} · <a href="/optout">Opt out</a> · <a href="/delete">Delete my information</a> · <a href="/">Back to Hivecast</a></p>
+        <p className="note" style={{ margin: 0 }}>{CALLER.company}{CALLER.phone ? ` · ${CALLER.phone}` : ""} · <a href={`mailto:${CALLER.email}`}>{CALLER.email}</a> · <a href="/optout">Opt out</a> · <a href="/delete">Delete my information</a> · <a href="/">Back to Hivecast</a></p>
       </div>
     </main>
   );
