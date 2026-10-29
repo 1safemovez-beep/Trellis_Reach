@@ -41,7 +41,12 @@ export async function askJSON<T = any>(opts: Parameters<typeof ask>[0]): Promise
 }
 
 // Rules every piece of marketing must follow. Kept in one place so all agents share them.
+import { CALLER } from "./constants";
+
+const PHONE = CALLER.phone || "[COMPANY PHONE]";
+
 export const COMPLIANCE_RULES = `Never invent results, numbers, reviews, testimonials or guarantees; use only proof the business supplied, otherwise an honest founder story or free trial.
 Never pressure or use false urgency. Emails need an easy unsubscribe line. SMS must name the sender and end with "Reply STOP to opt out".
-AI phone scripts open by saying it is an AI assistant, ask if now is a good time, and offer a human at any point.
+AI phone scripts MUST open with exactly this, filling in the business: "Hi, this is ${CALLER.aiName}, an AI assistant calling for [BUSINESS NAME] with ${CALLER.company}. If you wish to opt out of this AI call, press 1 at any time." Then ask if now is a good time, offer a human at any point, give the callback number ${PHONE} before ending, and close by repeating: "To opt out of future AI calls, press 1 now or visit ${CALLER.optOutUrl}." If they press 1 or ask to stop, the script says: "You're opted out. You won't get more AI calls from us. Goodbye."
+Emails end with: "${CALLER.company} · ${PHONE} · Unsubscribe or opt out: ${CALLER.optOutUrl}".
 AI-generated video carries a short "Made with AI" disclosure. Texts and calls only go to leads who consented.`;

@@ -1,6 +1,6 @@
 "use client";
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { BUSINESSES, LEVEL_PATHS, LEVELS, PATHS, SOURCES } from "@/lib/constants";
+import { BUSINESSES, CALLER, LEVEL_PATHS, LEVELS, PATHS, SOURCES } from "@/lib/constants";
 import { MicButton } from "@/components/voice";
 import { RoyalBees } from "@/components/bees";
 
@@ -154,7 +154,7 @@ export default function Hivecast() {
               <label>Your main goal right now<input id="hq-goal" name="goal" /></label>
               <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontWeight: 400 }}>
                 <input id="hq-consent" type="checkbox" name="consent" style={{ width: "auto", marginTop: 3 }} />
-                It's OK to follow up by email, and by text or AI phone call if I gave a number. I can opt out any time.
+                I agree that {CALLER.company} and the business I picked may contact me by email, and by text or AI-assisted phone call at the number I gave, about this request and related offers. Consent isn't required to buy. I can opt out any time: press 1 on any AI call, reply STOP to texts, or visit <a href="/optout">qvtrellis.net/optout</a>.
               </label>
               <input className="hp" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" />
               <div className="row"><button className="btn honey" disabled={busy}>See my next step</button>{err && <span className="err">{err}</span>}</div>
@@ -204,7 +204,9 @@ export default function Hivecast() {
           </div>
         </div>
       </div>
-      <p className="note" style={{ textAlign: "center" }}><a href="/login">Team sign in</a></p>
+      <p className="note" style={{ textAlign: "center" }}>
+        {CALLER.company}{CALLER.phone ? ` · ${CALLER.phone}` : ""} · <a href="/optout">Opt out of calls, texts and emails</a> · <a href="/login">Team sign in</a>
+      </p>
     </main>
   );
 }

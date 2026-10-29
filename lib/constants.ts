@@ -76,3 +76,13 @@ export const PROFILE_SLOTS: [string, string][] = [
   ["problem", "Their problem"], ["result", "Result they get"], ["proof", "Proof"],
   ["offer", "Offer"], ["cta", "Call to action"], ["mood", "Look and mood"],
 ];
+
+// Who is calling. Used in every AI call opening, email footer and the opt-out page.
+// Set COMPANY_PHONE (and optionally AI_CALLER_NAME) in Vercel to fill these in.
+export const CALLER = {
+  aiName: process.env.NEXT_PUBLIC_AI_CALLER_NAME || "Reach",
+  company: "QVTrellis",
+  phone: process.env.NEXT_PUBLIC_COMPANY_PHONE || "",
+  optOutUrl: (process.env.NEXT_PUBLIC_SITE_URL || "https://qvtrellis.net") + "/optout",
+};
+export const OPTED_OUT = "OPTED OUT";
