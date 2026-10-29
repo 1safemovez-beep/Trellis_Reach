@@ -64,9 +64,9 @@ export function Board({ d, go }: { d: TeamData; go: (t: string) => void }) {
 }
 
 type ChatMsg = { role: "ai" | "me"; text: string };
-const CHEF_HELLO: ChatMsg = { role: "ai", text: "Hi, I'm your Marketing Chef. I'll ask a few quick questions and fill everything in for you.\n\nFirst: what's the name of the business we're marketing today?" };
+const CHEF_HELLO: ChatMsg = { role: "ai", text: "Hi, I'm your Marketing Chief. I'll ask a few quick questions and fill everything in for you.\n\nFirst: what's the name of the business we're marketing today?" };
 
-export function Chef({ d }: { d: TeamData }) {
+export function Chief({ d }: { d: TeamData }) {
   const toast = useToast();
   const [chat, setChat] = useState<ChatMsg[]>([CHEF_HELLO]);
   const [fields, setFields] = useState<Record<string, string>>({});
@@ -101,7 +101,7 @@ export function Chef({ d }: { d: TeamData }) {
       setFields((f) => ({ ...f, ...r.fields }));
       setChat((c) => [...c, { role: "ai", text: r.reply }]);
       if (talkRef.current) {
-        await say(r.reply);              // Chef answers out loud…
+        await say(r.reply);              // Chief answers out loud…
         if (talkRef.current && !r.done) listen.start(); // …then listens for the next answer
       }
     } catch (x: any) { setErr(x.message); } finally { setBusy(false); }
@@ -109,16 +109,27 @@ export function Chef({ d }: { d: TeamData }) {
 
   function send(e: FormEvent) { e.preventDefault(); sendText(input); }
 
-  async function toggleTalk() {
-    if (talk) { setTalk(false); stopSpeaking(); listen.stop(); return; }
+  // One big button that always does the next sensible thing, so you're never stuck.
+  async function mainButton() {
     if (!speechSupported()) return setErr("This browser can't listen. Use Chrome, Edge or Safari, or tap the mic on your keyboard.");
-    setTalk(true); talkRef.current = true;
-    await say(chatRef.current[chatRef.current.length - 1]?.text || "");
-    if (talkRef.current) listen.start();
+    setErr("");
+    if (listen.listening) { listen.stop(); return; }          // done talking: send what was heard
+    if (speaking) { stopSpeaking(); emptyTries.current = 0; listen.start(); return; } // skip the reading, answer now
+    if (busy) return;
+    emptyTries.current = 0;
+    if (!talk) {
+      setTalk(true); talkRef.current = true;
+      // Only read the greeting at the very start; after that, go straight to listening.
+      if (chatRef.current.length === 1) await say(chatRef.current[0].text);
+      if (talkRef.current) listen.start();
+      return;
+    }
+    listen.start();
   }
+  function endTalk() { setTalk(false); talkRef.current = false; stopSpeaking(); listen.stop(); }
 
   async function save() {
-    if (!fields.business_name) return toast("Tell the Chef the business name first");
+    if (!fields.business_name) return toast("Tell the Chief the business name first");
     const { data: u } = await supabase().auth.getUser();
     const { error } = await supabase().from("businesses").insert({ ...fields, created_by: u.user?.id });
     toast(error ? `Couldn't save: ${error.message}` : "Business saved");
@@ -126,22 +137,17 @@ export function Chef({ d }: { d: TeamData }) {
 
   return (
     <section className="view">
-      <Head eyebrow="Agent 1 · Marketing Chef" title="Talk to the Chef about your business" lead="Tap Start talking. The Chef asks one question at a time out loud, listens to your answer, and fills every field for you. Type only to fix a misheard word." />
+      <Head eyebrow="Agent 1 · Marketing Chief" title="Talk to the Chief about your business" lead="Tap Start talking. The Chief asks one question at a time out loud, listens to your answer, and fills every field for you. Type only to fix a misheard word." />
       <div className="grid2">
         <div className="panel">
           <div className="row" style={{ marginBottom: 10 }}>
-            <button type="button" className={"btn " + (talk ? "honey" : "primary")} onClick={toggleTalk} style={{ fontSize: 16, padding: "12px 18px" }}>
-              {talk ? (listen.listening ? "● Listening… tap to stop" : busy ? "Thinking…" : speaking ? "Speaking… tap to stop" : "Stop talking mode") : "🎤 Start talking"}
+            <button type="button" className={"btn " + (talk ? "honey" : "primary")} onClick={mainButton} style={{ fontSize: 16, padding: "12px 18px" }}>
+              {listen.listening ? "● Listening… tap when you're done" : busy ? "Thinking…" : speaking ? "🔊 Speaking… tap to answer now" : talk ? "🎤 Tap to answer" : "🎤 Start talking"}
             </button>
+            {talk && <button type="button" className="btn small" onClick={endTalk}>End talking</button>}
             {listen.interim && <span className="note">{listen.interim}</span>}
           </div>
           {listen.error && <p className="err">{listen.error}</p>}
-          {talk && !listen.listening && !busy && !speaking && (
-            <div className="row" style={{ marginBottom: 8 }}>
-              <button className="btn honey" type="button" onClick={() => { emptyTries.current = 0; listen.start(); }}>🎤 Tap to answer</button>
-              <button className="btn small" type="button" onClick={() => sendText("Skip this one, let's go to the next question.")}>Skip this question</button>
-            </div>
-          )}
           <div className="chat" aria-live="polite">{chat.map((m, i) => <div key={i} className={`msg ${m.role}`}>{m.text}</div>)}</div>
           <form className="row" onSubmit={send} style={{ marginTop: 10 }}>
             <input id="chef-in" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Or type here to correct…" autoComplete="off" style={{ flex: 1, minWidth: 0 }} />
@@ -152,7 +158,7 @@ export function Chef({ d }: { d: TeamData }) {
             <button className="btn small" type="button" disabled={busy} onClick={() => sendText("Skip this one, let's go to the next question.")}>Skip this question</button>
           </div>
           {err && <p className="err">{err}</p>}
-          <button className="btn small" type="button" style={{ marginTop: 8 }} onClick={() => { setTalk(false); stopSpeaking(); listen.stop(); setChat([CHEF_HELLO]); setFields({}); }}>Start over</button>
+          <button className="btn small" type="button" style={{ marginTop: 8 }} onClick={() => { endTalk(); setChat([CHEF_HELLO]); setFields({}); }}>Start over</button>
         </div>
         <div className="panel">
           <h3>Business profile</h3>

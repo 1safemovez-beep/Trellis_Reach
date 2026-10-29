@@ -5,7 +5,7 @@ The Trellis Reach Marketing App by QVTrellis. Created by Alicia Spears.
 > **Vision (Alicia Spears):** Marketing for all apps. Ad generator, video generator, funnel, email and phone contacts, AI fills the app, the app runs campaigns, learning and community, plug-ins, affiliates, Seed Loop, and more opportunities to uplift people.
 
 - **Hivecast** (the public home page): the funnel visitors see, with the seven paths, "Keep me posted", and AI questions and answers.
-- **Team dashboard** (`/app`): the Money Board, three AI agents (Marketing Chef, Creator AI, Follow-up AI), leads and income data with an Excel download, the calendar, the community board, and brand settings.
+- **Team dashboard** (`/app`): the Money Board, three AI agents (Marketing Chief, Creator AI, Follow-up AI), leads and income data with an Excel download, the calendar, the community board, and brand settings.
 - **Plug-in slots** for Stripe, Twilio, email, AI video, social posting, calendar sync and e-signature, which switch on as their keys are added.
 
 Built with Next.js, Supabase (database, sign-in, live updates) and the Anthropic API.
@@ -78,7 +78,7 @@ Supabase's built-in email only sends to the email on your Supabase account, and 
 
 ## Voice
 
-The Chef has a hands-free **Start talking** mode: it asks questions out loud, listens, and fills in the profile. Hivecast visitors can tap **Talk to fill this in**, and there are mic buttons on the other writing fields. Voice uses the browser's own speech recognition, so it works in Chrome, Edge and Safari (including iPhone), but not Firefox. The first time, the browser asks for microphone permission.
+The Chief has a hands-free **Start talking** mode: it asks questions out loud, listens, and fills in the profile. Hivecast visitors can tap **Talk to fill this in**, and there are mic buttons on the other writing fields. Voice uses the browser's own speech recognition, so it works in Chrome, Edge and Safari (including iPhone), but not Firefox. The first time, the browser asks for microphone permission.
 
 ---
 

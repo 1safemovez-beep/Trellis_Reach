@@ -39,7 +39,7 @@ export function AppKnowledge() {
   return (
     <div className="panel form">
       <h3 style={{ margin: 0 }}>🧠 What the AI knows about your apps</h3>
-      <p className="note" style={{ margin: 0 }}>Every agent (Chef, Creator, Follow-up, captions, the Hive judge and the Hivecast chat) uses these. Describe what each app is, who it's for and its goal. Changes reach the AI within a minute.</p>
+      <p className="note" style={{ margin: 0 }}>Every agent (Chief, Creator, Follow-up, captions, the Hive judge and the Hivecast chat) uses these. Describe what each app is, who it's for and its goal. Changes reach the AI within a minute.</p>
       {rows.map((r, i) => (
         <div key={r.name} className="form" style={{ borderTop: "1px solid var(--line)", paddingTop: 10 }}>
           <label>{r.name}<textarea value={r.about} onChange={(e) => setRows((v) => v.map((x, j) => (j === i ? { ...x, about: e.target.value } : x)))} placeholder="What it is, who it's for, its main goal" style={{ minHeight: 90 }} /></label>

@@ -3,13 +3,13 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useTeamData } from "@/lib/useTeamData";
 import { ToastProvider } from "@/components/ui";
-import { Board, Chef, Create } from "@/components/sectionsA";
+import { Board, Chief, Create } from "@/components/sectionsA";
 import { Calendar, Community, FollowUp, Graphs, Leads, Settings } from "@/components/sectionsB";
 import { Share } from "@/components/share";
 import { HiveChallenge } from "@/components/hive";
 
 const TABS = [
-  ["board", "Money Board"], ["chef", "Marketing Chef"], ["create", "Create"], ["share", "Share"], ["hive", "Hive Challenge"], ["graphs", "Graphs"], ["leads", "Leads & Data"],
+  ["board", "Money Board"], ["chef", "Marketing Chief"], ["create", "Create"], ["share", "Share"], ["hive", "Hive Challenge"], ["graphs", "Graphs"], ["leads", "Leads & Data"],
   ["followup", "Follow-up"], ["calendar", "Calendar"], ["community", "Community"], ["settings", "Settings"],
 ] as const;
 
@@ -80,7 +80,7 @@ export default function Dashboard() {
       </header>
       <main className="wrap">
         {tab === "board" && <Board d={d} go={go} />}
-        {tab === "chef" && <Chef d={d} />}
+        {tab === "chef" && <Chief d={d} />}
         {tab === "create" && <Create d={d} />}
         {tab === "share" && <Share d={d} />}
         {tab === "hive" && <HiveChallenge d={d} />}

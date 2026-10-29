@@ -73,22 +73,37 @@ export function useListen(onFinal: (text: string) => void, onEmpty?: () => void)
   return { listening, interim, error, start, stop };
 }
 
-// Reads text aloud with the device's voice. Resolves when finished (or right away if unsupported).
+// Reads text aloud with the device's voice. Resolves when finished, when stopped, or (because
+// some phones never report "finished") after the time the words should take, so nothing hangs.
+let finishSpeaking: (() => void) | null = null;
 export function speak(text: string): Promise<void> {
   return new Promise((resolve) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return resolve();
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text.replace(/[*_#`]/g, ""));
-    u.lang = navigator.language || "en-US";
-    u.rate = 1.02;
-    u.onend = () => resolve();
-    u.onerror = () => resolve();
-    window.speechSynthesis.speak(u);
+    const synth = window.speechSynthesis;
+    synth.cancel();
+    const clean = text.replace(/[*_#`]/g, "").trim();
+    if (!clean) return resolve();
+    // Short sentences: long ones can stop halfway on some browsers.
+    const parts = clean.match(/[^.!?\n]+[.!?]*/g)?.map((p) => p.trim()).filter(Boolean) || [clean];
+    let done = false;
+    const finish = () => { if (done) return; done = true; clearTimeout(timer); finishSpeaking = null; resolve(); };
+    finishSpeaking = () => { synth.cancel(); finish(); };
+    const words = clean.split(/\s+/).length;
+    const timer = setTimeout(finish, (words / 2.3) * 1000 + 2500);
+    parts.forEach((p, i) => {
+      const u = new SpeechSynthesisUtterance(p);
+      u.lang = navigator.language || "en-US";
+      u.rate = 1.02;
+      if (i === parts.length - 1) u.onend = finish;
+      u.onerror = finish;
+      synth.speak(u);
+    });
   });
 }
 
 export function stopSpeaking() {
-  if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+  if (finishSpeaking) finishSpeaking();
+  else if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
 }
 
 // Small mic button for any text field. Adds what you say to the field.
