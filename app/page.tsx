@@ -1,7 +1,8 @@
 "use client";
-import { FormEvent, useRef, useState } from "react";
-import { BUSINESSES, PATHS, SOURCES } from "@/lib/constants";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { BUSINESSES, LEVEL_PATHS, LEVELS, PATHS, SOURCES } from "@/lib/constants";
 import { MicButton } from "@/components/voice";
+import { RoyalBees } from "@/components/bees";
 
 // Public Hivecast funnel. Visitors are not signed in; everything goes through /api/leads and /api/qa.
 async function post(path: string, body: unknown, method = "POST") {
@@ -22,6 +23,22 @@ export default function Hivecast() {
   const path = PATHS.find((p) => p.id === pathId);
   const formRef = useRef<HTMLFormElement>(null);
   const [fillNote, setFillNote] = useState("");
+  const [level, setLevel] = useState(0); // 1-7 when the visitor came from a community invite link
+  const [video, setVideo] = useState<{ url: string | null; poster?: string | null } | null>(null);
+
+  // Invite links look like /?level=2. They open the form with the matching path picked.
+  useEffect(() => {
+    const n = Number(new URLSearchParams(window.location.search).get("level"));
+    const lv = LEVELS[n - 1];
+    if (lv) { setLevel(n); setPathId(LEVEL_PATHS[lv[0]] || ""); setView("qual"); }
+  }, []);
+
+  // The path's video, made in the dashboard with "Show on Hivecast for".
+  useEffect(() => {
+    if (view !== "next" || !pathId) return;
+    setVideo(null);
+    fetch(`/api/video/path?path=${encodeURIComponent(pathId)}`).then((r) => r.json()).then(setVideo).catch(() => setVideo({ url: null }));
+  }, [view, pathId]);
 
   // Voice fill: the visitor talks, the AI fills the form, the visitor checks it and submits.
   async function fillFromVoice(said: string) {
@@ -54,7 +71,7 @@ export default function Hivecast() {
     try {
       const r = await post("/api/leads", {
         kind: "qualify", pathId, business: f.get("business"), name: f.get("name"), email: f.get("email"),
-        phone: f.get("phone"), source: f.get("source"), goal: f.get("goal"), consent: f.get("consent") === "on", website: f.get("website"),
+        phone: f.get("phone"), source: f.get("source"), goal: f.get("goal"), consent: f.get("consent") === "on", website: f.get("website"), level,
       });
       setLeadId(r.id || ""); setView("next");
     } catch (x: any) { setErr(x.message); } finally { setBusy(false); }
@@ -77,7 +94,9 @@ export default function Hivecast() {
     <main className="wrap" style={{ paddingBlock: "24px 60px", display: "grid", gap: 16 }}>
       <div className="hive">
         <div className="hive-top">
-          <span className="eyebrow" style={{ color: "inherit", opacity: 0.7 }}>Hivecast · by QVTrellis</span>
+          <img className="hive3d" src="/hive3d.svg" alt="" aria-hidden="true" />
+          <RoyalBees />
+          <span className="eyebrow">Hivecast · by QVTrellis</span>
           <h2>Grow what you've built, without the guesswork</h2>
           <p>Pick what you're here for. We'll show you your own short video and next step.</p>
           <div className="row">
@@ -98,6 +117,7 @@ export default function Hivecast() {
           {view === "kept" && <div className="panel"><h3>You're on the list</h3><p className="note">Expect one useful email at a time. Unsubscribe whenever you like.</p></div>}
           {view === "qual" && (
             <form className="form" onSubmit={qualify} ref={formRef}>
+              {level > 0 && <div className="pill honey" style={{ justifySelf: "start" }}>Joining the community as: {LEVELS[level - 1][0]}</div>}
               <div className="panel" style={{ display: "grid", gap: 6, background: "var(--honey-soft)", borderColor: "var(--honey)" }}>
                 <b>Rather talk than type?</b>
                 <span className="note">Tap the mic and say who you are, what business this is about, your name, email, and your main goal. We'll fill it all in.</span>
@@ -137,6 +157,10 @@ export default function Hivecast() {
               <span className="eyebrow">Your path · {path.name}</span>
               <h3 style={{ margin: 0 }}>Next: watch your short video, then pick a time</h3>
               <p className="note" style={{ margin: 0 }}>{path.hint}</p>
+              {video?.url ? (<>
+                <video className="hive-video" src={video.url} poster={video.poster || undefined} controls playsInline />
+                <span className="ai-tag">Made with AI</span>
+              </>) : video && <p className="note" style={{ margin: 0 }}>Your video for this path is coming soon.</p>}
               <div className="row">
                 <a className="btn honey" href="#book">Book a call</a>
                 <button className="btn" type="button" onClick={notYet}>Not ready yet</button>

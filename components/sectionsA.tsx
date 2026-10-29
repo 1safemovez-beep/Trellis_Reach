@@ -5,6 +5,7 @@ import { api, supabase } from "@/lib/supabaseClient";
 import { BUSINESSES, CONTENT_FORMATS, PROFILE_SLOTS, SOURCES, VIDEO_MODES } from "@/lib/constants";
 import type { TeamData } from "@/lib/useTeamData";
 import { Bars, copyText, Empty, Head, money, useToast, when } from "./ui";
+import { PlaySaved, VideoMaker } from "./video";
 
 export function calItems(d: TeamData) {
   return [
@@ -162,9 +163,11 @@ export function Create({ d }: { d: TeamData }) {
   const [err, setErr] = useState("");
   const [out, setOut] = useState<any>(null);
   const [whenAt, setWhenAt] = useState("");
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const isVideo = /video|commercial|outreach|invite/i.test(format) || mode !== "none";
 
   async function go() {
-    setErr(""); setBusy(true);
+    setErr(""); setBusy(true); setSavedId(null);
     try {
       const profile = d.businesses.find((b) => b.business_name === biz) || { business_name: biz };
       setOut(await api("/api/agents/create", { format, mode, photoConsent: consent, description: desc, vision, profile }));
@@ -172,13 +175,21 @@ export function Create({ d }: { d: TeamData }) {
   }
   const text = out ? `${out.title}\n\n${out.script}${out.shots ? `\n\nSHOT LIST\n${out.shots}` : ""}\n\nKey points covered: ${(out.keyPointsCovered || []).join(" · ")}` : "";
 
-  async function save() {
+  // Saves once and remembers the row, so "Make video" and "Save" never create duplicates.
+  async function saveRow(): Promise<string | null> {
+    if (savedId) return savedId;
     const { data: u } = await supabase().auth.getUser();
-    const { error } = await supabase().from("content").insert({
+    const { data, error } = await supabase().from("content").insert({
       title: out.title, body: out.script + (out.shots ? `\n\nSHOT LIST\n${out.shots}` : ""), type: out.format, business: biz,
       video_mode: out.mode, status: whenAt ? "Scheduled" : "Draft", scheduled_for: whenAt ? new Date(whenAt).toISOString() : null, created_by: u.user?.id,
-    });
-    toast(error ? `Couldn't save: ${error.message}` : whenAt ? "Saved and scheduled" : "Saved to library");
+    }).select("id").single();
+    if (error) throw new Error(`Couldn't save: ${error.message}`);
+    setSavedId(data.id);
+    return data.id;
+  }
+  async function save() {
+    if (savedId) return toast("Already in your library");
+    try { await saveRow(); toast(whenAt ? "Saved and scheduled" : "Saved to library"); } catch (x: any) { toast(x.message); }
   }
 
   return (
@@ -215,6 +226,7 @@ export function Create({ d }: { d: TeamData }) {
               <label style={{ display: "flex", gap: 6, alignItems: "center" }}>Schedule<input id="cr-when" type="datetime-local" value={whenAt} onChange={(e) => setWhenAt(e.target.value)} style={{ width: "auto" }} /></label>
             </div>
           )}
+          {out && isVideo && <VideoMaker words={out.voiceover || out.script} ensureSaved={saveRow} />}
         </div>
       </div>
       <div className="panel">
@@ -225,7 +237,7 @@ export function Create({ d }: { d: TeamData }) {
             <tbody>{d.content.map((c) => (
               <tr key={c.id}>
                 <td><b>{c.title}</b>{c.example && <> <span className="pill muted">Example</span></>}<details><summary className="note" style={{ cursor: "pointer" }}>Show script</summary><div className="out" style={{ marginTop: 6 }}>{c.body}</div></details></td>
-                <td>{c.type}{c.video_mode && c.video_mode !== "No video" && <div className="note">{c.video_mode}</div>}</td>
+                <td>{c.type}{c.video_mode && c.video_mode !== "No video" && <div className="note">{c.video_mode}</div>}{c.video_id && <PlaySaved videoId={c.video_id} status={c.video_status} />}</td>
                 <td>{c.business}</td>
                 <td><span className={"pill " + (c.status === "Scheduled" ? "honey" : "muted")}>{c.status}</span></td>
                 <td className="num">{when(c.scheduled_for)}</td>

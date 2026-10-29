@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { BUSINESSES, PATHS, SOURCES } from "@/lib/constants";
+import { BUSINESSES, LEVELS, PATHS, SOURCES } from "@/lib/constants";
 import { clean, fail, rateLimited, supabaseAdmin } from "@/lib/server";
 
 // Public lead capture for the Hivecast funnel. Visitors are not signed in, so this route
@@ -20,6 +20,7 @@ export async function POST(req: Request) {
   const source = SOURCES.includes(b.source) ? b.source : "Direct";
   const phone = clean(b.phone, 40);
   const consent = Boolean(b.consent);
+  const level = LEVELS[Number(b.level) - 1]?.[0];
 
   const { data, error } = await supabaseAdmin()
     .from("leads")
@@ -27,6 +28,7 @@ export async function POST(req: Request) {
       name, email, phone: phone || null, business, path, source,
       stage: keepPosted ? "Nurture" : "New",
       goal: clean(b.goal, 500) || null,
+      notes: level ? `Level: ${level}` : null,
       consent_email: keepPosted || consent,
       consent_sms_calls: consent && Boolean(phone),
     })

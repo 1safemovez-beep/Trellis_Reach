@@ -52,7 +52,7 @@ export function Leads({ d }: { d: TeamData }) {
   }
 
   return (
-    <section className="view">
+    <section className="view noir">
       <div className="row" style={{ justifyContent: "space-between" }}>
         <Head eyebrow="Data center" title="Leads, sources and income" />
         <button className="btn primary" type="button" onClick={() => exportExcel(d).catch((x) => toast(`Export failed: ${x.message}`))}>Download Excel</button>
@@ -64,7 +64,7 @@ export function Leads({ d }: { d: TeamData }) {
       </div>
       <div className="grid2">
         <div className="panel"><h3>Leads by source</h3><Bars pairs={SOURCES.map((s) => [s, d.leads.filter((l) => l.source === s).length])} />{!total && <p className="note">No leads yet. Each Hivecast sign-up adds to this graph.</p>}</div>
-        <div className="panel"><h3>Pipeline</h3><Bars pairs={STAGES.map((s) => [s, st[s]])} /></div>
+        <div className="panel pipeline"><h3>Pipeline</h3><Bars pairs={STAGES.map((s) => [s, st[s]])} /></div>
       </div>
       <div className="panel">
         <div className="row" style={{ justifyContent: "space-between", marginBottom: 8 }}>
@@ -74,17 +74,17 @@ export function Leads({ d }: { d: TeamData }) {
             <select id="f-src" value={fSrc} onChange={(e) => setFSrc(e.target.value)} style={{ width: "auto" }}><option value="">All sources</option>{SOURCES.map((s) => <option key={s}>{s}</option>)}</select>
           </div>
         </div>
-        <div className="tablewrap"><table>
+        <div className="tablewrap cards"><table>
           <thead><tr><th>Name</th><th>Business / path</th><th>Source</th><th>Stage</th><th>Value</th><th>Closer</th><th>Added</th></tr></thead>
           <tbody>{rows.length ? rows.map((l) => (
             <tr key={l.id}>
-              <td><b>{l.name}</b>{l.example && <> <span className="pill muted">Example</span></>}<div className="note">{l.email}{l.phone ? ` · ${l.phone}` : ""}</div></td>
-              <td>{l.business}<div className="note">{l.path}</div></td>
-              <td>{l.source}</td>
-              <td><select aria-label="Stage" value={l.stage} onChange={(e) => patch(l.id, { stage: e.target.value }, e.target.value === "Won" ? "Won! Add the deal value" : "Stage updated")}>{STAGES.map((s) => <option key={s}>{s}</option>)}</select></td>
-              <td className="num"><input type="number" min={0} aria-label="Deal value" defaultValue={l.value || ""} onBlur={(e) => +e.target.value !== +l.value && patch(l.id, { value: +e.target.value || 0 }, "Value saved")} style={{ width: 90, padding: "4px 6px", fontSize: 13 }} /></td>
-              <td><input aria-label="Closer" defaultValue={l.closer || ""} onBlur={(e) => e.target.value !== (l.closer || "") && patch(l.id, { closer: e.target.value }, "Closer saved")} style={{ width: 100, padding: "4px 6px", fontSize: 13 }} /></td>
-              <td className="num">{when(l.created_at)}</td>
+              <td data-label="Name"><b>{l.name}</b>{l.example && <> <span className="pill muted">Example</span></>}<div className="note">{l.email}{l.phone ? ` · ${l.phone}` : ""}</div></td>
+              <td data-label="Business / path">{l.business}<div className="note">{l.path}</div></td>
+              <td data-label="Source">{l.source}</td>
+              <td data-label="Stage"><select aria-label="Stage" value={l.stage} onChange={(e) => patch(l.id, { stage: e.target.value }, e.target.value === "Won" ? "Won! Add the deal value" : "Stage updated")}>{STAGES.map((s) => <option key={s}>{s}</option>)}</select></td>
+              <td className="num" data-label="Value"><input type="number" min={0} aria-label="Deal value" defaultValue={l.value || ""} onBlur={(e) => +e.target.value !== +l.value && patch(l.id, { value: +e.target.value || 0 }, "Value saved")} style={{ width: 90, padding: "4px 6px", fontSize: 13 }} /></td>
+              <td data-label="Closer"><input aria-label="Closer" defaultValue={l.closer || ""} onBlur={(e) => e.target.value !== (l.closer || "") && patch(l.id, { closer: e.target.value }, "Closer saved")} style={{ width: 100, padding: "4px 6px", fontSize: 13 }} /></td>
+              <td className="num" data-label="Added">{when(l.created_at)}</td>
             </tr>
           )) : <tr><td colSpan={7}><Empty>No leads match.</Empty></td></tr>}</tbody>
         </table></div>
@@ -196,9 +196,17 @@ export function Calendar({ d }: { d: TeamData }) {
   );
 }
 
+function inviteLink(level: number) {
+  const base = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "");
+  return `${base}/?level=${level + 1}`;
+}
+
 export function Community({ d }: { d: TeamData }) {
   const toast = useToast();
   const [text, setText] = useState("");
+  const [open, setOpen] = useState<number | null>(null);
+  // People who signed up through a level's invite link carry "Level: <name>" in their notes.
+  const joined = (name: string) => d.leads.filter((l) => (l.notes || "").includes(`Level: ${name}`));
   async function post(e: FormEvent) {
     e.preventDefault();
     if (!text.trim()) return toast("Write something first");
@@ -210,7 +218,32 @@ export function Community({ d }: { d: TeamData }) {
     <section className="view">
       <Head eyebrow="Trellis Reach community · paid" title="Who can do what" lead="The mall lobby community is free. This one is for people working the marketing, and each level unlocks more." />
       <div className="grid2">
-        <div className="panel"><div className="levels">{LEVELS.map((l, i) => <div className="level" key={l[0]}><span className="lv">L{i + 1}</span><div><b>{l[0]}</b><div className="note">{l[1]}</div></div></div>)}</div></div>
+        <div className="panel">
+          <p className="note" style={{ marginTop: 0 }}>Tap a level to see who joined and get its invite link.</p>
+          <div className="levels">{LEVELS.map((l, i) => {
+            const people = joined(l[0]);
+            const isOpen = open === i;
+            return (
+              <div key={l[0]}>
+                <button type="button" className="level" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : i)}>
+                  <span className="lv">L{i + 1}</span>
+                  <div><b>{l[0]}</b> {people.length > 0 && <span className="pill honey">{people.length} joined</span>}<div className="note">{l[1]}</div></div>
+                </button>
+                {isOpen && (
+                  <div className="level-open">
+                    <div className="row">
+                      <button className="btn primary small" type="button" onClick={() => copyText(inviteLink(i), toast)}>Copy invite link</button>
+                      <a className="btn small" href={inviteLink(i)} target="_blank" rel="noreferrer">Preview sign-up ↗</a>
+                    </div>
+                    <span className="note">Anyone who signs up with this link lands in Leads &amp; Data tagged with this level.</span>
+                    {people.length ? people.slice(0, 8).map((p) => <div className="post" key={p.id}><b>{p.name}</b><span className="who">{p.email} · {p.stage} · {when(p.created_at)}</span></div>)
+                      : <span className="note">No one has joined this level yet.</span>}
+                  </div>
+                )}
+              </div>
+            );
+          })}</div>
+        </div>
         <div className="panel">
           <h3>Community board</h3>
           <form className="row" onSubmit={post}><input id="post-in" value={text} onChange={(e) => setText(e.target.value)} placeholder="Share a win or ask a question" style={{ flex: 1, minWidth: 0 }} /><button className="btn primary">Post</button></form>

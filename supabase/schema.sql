@@ -77,6 +77,11 @@ create table if not exists content (
   created_at timestamptz not null default now()
 );
 
+-- Video columns (added Oct 2026). Safe to run again.
+alter table content add column if not exists video_id text;
+alter table content add column if not exists video_status text;
+alter table content add column if not exists hivecast_path text;
+
 create table if not exists bookings (
   id uuid primary key default gen_random_uuid(),
   title text not null,

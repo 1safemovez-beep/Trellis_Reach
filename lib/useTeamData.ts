@@ -10,6 +10,7 @@ export type Lead = {
 export type Content = {
   id: string; title: string; body: string; type: string; business: string; video_mode: string | null;
   status: string; scheduled_for: string | null; example: boolean; created_at: string;
+  video_id?: string | null; video_status?: string | null; hivecast_path?: string | null;
 };
 export type Booking = { id: string; title: string; kind: string; starts_at: string; who: string | null; business: string | null; example: boolean };
 export type Business = { id: string; business_name: string; [k: string]: any };

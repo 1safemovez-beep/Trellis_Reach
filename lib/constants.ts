@@ -1,8 +1,8 @@
 // Shared lists. Add a business, path or video mode here and the whole app picks it up.
 
 export const BUSINESSES = [
-  "Seed Loop", "Persona Mall", "Tool Bazaar", "BuildBot", "BuildBot 2", "Cooking app", "Caelia",
-  "QuantVantage", "Designing app", "Unique Boutique", "QVTrellis builds", "Responsible AI Check",
+  "Seed Loop", "Persona Mall", "Tool Bazaar", "BuildBot", "Alicia's Art AI Studio", "Cooking app", "AngelzPulse",
+  "QuantVantage", "QuantVantage AI Evaluation", "Designing app", "Unique Boutique", "QVTrellis builds", "Responsible AI Check",
   "Other mall store", "Undecided",
 ];
 
@@ -32,13 +32,24 @@ export const VIDEO_MODES = [
 
 export const CONTENT_FORMATS = [
   "30-second ad / commercial", "Funnel video (VSL)", "Social post", "Nurture email", "SMS follow-up", "Booking-call opener",
+  "Client outreach message (attract clients)", "App user invite (attract users)", "Sales call script (close the deal)",
+  "Objection answers", "Proposal / offer close email",
 ];
 
-export const PLUGINS = [
+// Extra direction for the sales formats, so each one does its job.
+export const SALES_GUIDES: Record<string, string> = {
+  "Client outreach message (attract clients)": "A short, personal first message (DM or email) to a business owner. Lead with a specific problem they likely have, one line on how we fix it, and a low-pressure question that invites a reply. Under 120 words. Include a 2-message follow-up sequence.",
+  "App user invite (attract users)": "An invite that makes a regular person want to try the app today: the everyday problem, what they get in the first 5 minutes, that it is free to start, and one tap to join. Include a short version for social and a longer one for email.",
+  "Sales call script (close the deal)": "A full booking-call script for the closer: warm open, permission, discovery questions (situation, pain, cost of doing nothing, goal, decision maker, budget, timeline), recap in their words, present the right tier, handle the top objections, a clear ask for the sale, and next steps. Label each part. Mark where the closer pauses and listens.",
+  "Objection answers": "The 8 most likely objections (price, timing, trust, 'I'll think about it', 'I can do it myself', spouse/partner, past bad agency, 'send me info') each with an honest acknowledge, a clarifying question, and a short answer that leads back to the next step.",
+  "Proposal / offer close email": "A follow-up email after a call: recap their goal in their words, the recommended package and what's included, the price options (monthly, yearly, payment plan) as placeholders in [brackets], what happens in the first 7 days, and one clear way to say yes.",
+};
+
+export const PLUGINS: { name: string; detail: string; env: string; alt?: string[] }[] = [
   { name: "Payments", detail: "Stripe: subscriptions, yearly plans, payment plans, creator payouts", env: "STRIPE_SECRET_KEY" },
   { name: "Text and AI phone", detail: "Twilio: SMS and voice follow-up to consenting leads", env: "TWILIO_AUTH_TOKEN" },
   { name: "Email sending", detail: "Resend: nurture emails with unsubscribe", env: "RESEND_API_KEY" },
-  { name: "AI video", detail: "Video generation API for photo, describe and one-click modes", env: "VIDEO_API_KEY" },
+  { name: "AI video", detail: "HeyGen: avatar videos read word for word from your script", env: "HEYGEN_API_KEY", alt: ["VIDEO_API_KEY"] },
   { name: "Social posting", detail: "Post ads to Facebook, LinkedIn and more", env: "SOCIAL_API_KEY" },
   { name: "Calendar sync", detail: "Google Calendar or Cal.com for bookings and webinars", env: "CALENDAR_API_KEY" },
   { name: "E-signature", detail: "Agreements signed before onboarding", env: "ESIGN_API_KEY" },
@@ -53,6 +64,12 @@ export const LEVELS = [
   ["Tech founder", "Everything above plus builds into the mall and white label."],
   ["Paying client", "Trellis Reach tiers: ads first, then email and phone, then the full system."],
 ];
+
+// Which Hivecast path each community level signs up through. Used by the invite links.
+export const LEVEL_PATHS: Record<string, string> = {
+  "PushPilot affiliate": "creator", "Creator": "creator", "Seed Loop member": "builder", "Entrepreneur": "entre",
+  "Founder": "entre", "Tech founder": "build", "Paying client": "client",
+};
 
 export const PROFILE_SLOTS: [string, string][] = [
   ["business_name", "Business"], ["app", "Which mall business"], ["audience", "Who it's for"],
