@@ -1,8 +1,8 @@
 // Shared lists. Add a business, path or video mode here and the whole app picks it up.
 
 export const BUSINESSES = [
-  "Seed Loop", "Persona Mall", "Tool Bazaar", "BuildBot", "Alicia's Art AI Studio", "Cooking app", "AngelzPulse",
-  "QuantVantage", "QuantVantage AI Evaluation", "Designing app", "Unique Boutique", "QVTrellis builds", "Responsible AI Check",
+  "Trellis Reach", "Hivecast", "PushPilot", "Seed Loop", "Persona Mall", "Tool Bazaar", "BuildBot 2", "BuildBot App Studio", "Alicia's Art AI Studio", "Cooking app", "AngelzPulse",
+  "QuantVantage", "QuantVantage AI Evaluation", "Designing app", "Unique Boutique", "Responsible AI Check",
   "Other mall store", "Undecided",
 ];
 

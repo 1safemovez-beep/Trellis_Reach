@@ -8,6 +8,7 @@ import { calItems, CalRow, stats } from "./sectionsA";
 import { MicButton } from "./voice";
 import { HiveRules } from "./hive";
 import { PricePlans } from "./prices";
+import { AppKnowledge } from "./knowledge";
 
 async function exportExcel(d: TeamData) {
   const ExcelJS = (await import("exceljs")).default;
@@ -335,6 +336,7 @@ export function Settings({ d }: { d: TeamData }) {
           <p className="note">Plug-ins switch on when their key is added to the server's environment settings.</p>
         </div>
       </div>
+      <AppKnowledge />
       <PricePlans />
       <HiveRules />
       <div className="panel">

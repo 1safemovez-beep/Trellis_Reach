@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     if (b.customerConsent) notes.push(`Promised ${now}: "${CLIENT_CONSENT_PROMISE}"`);
     if (wantsReadiness) notes.push(`Testing permission given ${now}: "${READINESS_AUTH_TEXT}" NEXT STEP: agree in writing on scope and dates before any testing.`);
     if (consent && phone) notes.push(consentNote("client sign-up"));
-    row = { name: `${clean(b.name, 120) || email.split("@")[0]} · ${company}`, email, phone: phone || null, business: "QVTrellis builds",
+    row = { name: `${clean(b.name, 120) || email.split("@")[0]} · ${company}`, email, phone: phone || null, business: "Trellis Reach",
       path: "High-stakes client / business", source, stage: "New", goal: clean(b.goal, 500) || null,
       consent_email: true, consent_sms_calls: consent && Boolean(phone) };
   } else {

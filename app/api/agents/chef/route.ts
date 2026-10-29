@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { askJSON } from "@/lib/ai";
 import { BUSINESSES, PROFILE_SLOTS } from "@/lib/constants";
 import { fail, requireTeam } from "@/lib/server";
+import { knowledge } from "@/lib/knowledge";
 
 // Agent 1: Marketing Chef. Interviews the owner one question at a time and fills the profile.
 export async function POST(req: Request) {
@@ -14,6 +15,7 @@ export async function POST(req: Request) {
   const transcript = history
     .map((m: any) => `${m.role === "ai" ? "Chef" : "Owner"}: ${String(m.text || "").slice(0, 1500)}`)
     .join("\n");
+  const about = await knowledge(fields.business_name || fields.app);
   try {
     const r = await askJSON<{ reply: string; fields: Record<string, string>; done: boolean }>({
       quick: true,
@@ -22,7 +24,9 @@ Be warm, plain-spoken and brief. Ask exactly ONE question per reply. Never push 
 Fields: ${PROFILE_SLOTS.map(([k, l]) => `${k} (${l})`).join(", ")}. For "app" choose from: ${BUSINESSES.join(", ")}.
 Extract values the owner gave, cleaned up but faithful. Never invent facts or results. If they have no proof yet, set proof to "None yet - use founder story or free trial".
 If an answer is vague, ask a gentle follow-up. When all fields are filled, give a one-line summary and ask them to tap Save business.
-JSON shape: {"reply": string, "fields": {only fields learned or corrected in the owner's last message}, "done": boolean}`,
+If the owner names one of our own businesses below, you already know it: fill every field you can from what we know, read it back in one or two short lines, and only ask about what's missing or what they want changed. Never say you don't know our own apps.
+${about}
+JSON shape: {"reply": string, "fields": {only fields learned, filled from what we know, or corrected this turn}, "done": boolean}`,
       messages: [{ role: "user", content: `Current fields: ${JSON.stringify(fields)}\n\nConversation:\n${transcript}` }],
     });
     const allowed = new Set(PROFILE_SLOTS.map(([k]) => k));

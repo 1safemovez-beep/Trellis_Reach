@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { askJSON, COMPLIANCE_RULES } from "@/lib/ai";
 import { CONTENT_FORMATS, SALES_GUIDES, VIDEO_MODES } from "@/lib/constants";
 import { clean, fail, requireTeam } from "@/lib/server";
+import { knowledge } from "@/lib/knowledge";
 
 // Agent 2: Creator AI. Writes ads, video scripts and messages with locked key points.
 export async function POST(req: Request) {
@@ -13,12 +14,15 @@ export async function POST(req: Request) {
   if (mode.id === "photo" && !b?.photoConsent) return fail("Confirm you have permission to use the photo.");
   const description = clean(b?.description, 1500);
   if (mode.id === "describe" && !description) return fail("Describe the video first.");
+  const about = await knowledge(b?.profile?.business_name || b?.profile?.app);
   try {
     const r = await askJSON<{ title: string; script: string; shots: string; voiceover: string; keyPointsCovered: string[] }>({
       maxTokens: 4000,
       system: `You are the Creator AI in Trellis Reach. You write award-quality, persuasive but never pushy marketing for high-stakes clients who must make their money back.
 LOCKED key points, in order: 1) a hook in the first 3 seconds or first line, 2) the problem and what it costs, 3) the answer: what the business does, 4) proof, 5) one clear call to action into the Hivecast funnel.
 ${COMPLIANCE_RULES}
+${about}
+When the business is one of ours, the ad is for that app or program: use what we know about it as the source of truth.
 For video formats include a shot list with timing, wardrobe, setting and mood.
 "voiceover" is ONLY the exact words a presenter says out loud, in order: no labels, stage directions, brackets, emojis or timing notes. Keep it under 1,300 characters.
 JSON shape: {"title": string, "script": string, "shots": string (empty if not video), "voiceover": string, "keyPointsCovered": [string]}`,

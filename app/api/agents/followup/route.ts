@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { askJSON, COMPLIANCE_RULES } from "@/lib/ai";
 import { OPTED_OUT, STAGES } from "@/lib/constants";
 import { clean, fail, requireTeam, supabaseAdmin } from "@/lib/server";
+import { knowledge } from "@/lib/knowledge";
 
 // Agent 3: Follow-up AI. Drafts a gentle message for a lead and suggests the next step.
 // Nothing is sent from here: a person approves first, and sending switches on with the
@@ -16,11 +17,13 @@ export async function POST(req: Request) {
   if ((lead.notes || "").includes(OPTED_OUT)) return fail("This person opted out. Don't contact them.");
   if (channel !== "Email" && !lead.consent_sms_calls) return fail("This lead hasn't agreed to texts or calls. Use email.");
   if (channel === "Email" && !lead.consent_email && lead.stage !== "Booked") return fail("This lead hasn't agreed to marketing emails.");
+  const about = await knowledge(lead.business);
   try {
     const r = await askJSON<{ subject: string; message: string; nextStep: string; suggestedStage: string }>({
       system: `You are the Follow-up AI in Trellis Reach. Draft a gentle ${channel} for this lead and suggest the next step.
 Give one clear, easy next step (book a call, watch the path video, or reply). Nurture leads get one useful tip. Booked leads get a friendly reminder and the placeholder [VIDEO LINK] for the watch-before-your-call video. Lost leads get a short, respectful check-in for later. SMS stays under 300 characters.
 ${COMPLIANCE_RULES}
+${about}
 JSON shape: {"subject": string (empty unless email), "message": string, "nextStep": string, "suggestedStage": one of ${JSON.stringify(STAGES)}}`,
       messages: [{
         role: "user",
