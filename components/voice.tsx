@@ -21,13 +21,15 @@ export function speechSupported() {
 }
 
 // Listens once. Calls onFinal with the whole phrase when the person stops talking.
-export function useListen(onFinal: (text: string) => void) {
+export function useListen(onFinal: (text: string) => void, onEmpty?: () => void) {
   const [listening, setListening] = useState(false);
   const [interim, setInterim] = useState("");
   const [error, setError] = useState("");
   const rec = useRef<Rec | null>(null);
   const finalRef = useRef(onFinal);
   finalRef.current = onFinal;
+  const emptyRef = useRef(onEmpty);
+  emptyRef.current = onEmpty;
 
   const stop = useCallback(() => { rec.current?.stop(); }, []);
 
@@ -41,6 +43,7 @@ export function useListen(onFinal: (text: string) => void) {
     r.continuous = false;
     r.interimResults = true;
     let finalText = "";
+    let blocked = false;
     r.onresult = (e: any) => {
       let live = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -51,6 +54,7 @@ export function useListen(onFinal: (text: string) => void) {
     };
     r.onerror = (e: any) => {
       const code = e?.error;
+      if (code === "not-allowed" || code === "service-not-allowed") blocked = true;
       if (code === "not-allowed" || code === "service-not-allowed") setError("Microphone is blocked. Allow it in your browser's site settings, then try again.");
       else if (code === "no-speech") setError("I didn't hear anything. Tap the mic and try again.");
       else if (code !== "aborted") setError("Listening stopped. Tap the mic to try again.");
@@ -60,6 +64,7 @@ export function useListen(onFinal: (text: string) => void) {
       setInterim("");
       const t = finalText.trim();
       if (t) finalRef.current(t);
+      else if (!blocked) emptyRef.current?.();
     };
     try { r.start(); setListening(true); } catch { setError("Couldn't start the microphone. Try again."); }
   }, []);

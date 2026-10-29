@@ -80,7 +80,15 @@ export function Chef({ d }: { d: TeamData }) {
   chatRef.current = chat;
   const fieldsRef = useRef(fields);
   fieldsRef.current = fields;
-  const listen = useListen((spoken) => sendText(spoken));
+  // If nothing was heard, listen again (twice) instead of getting stuck.
+  const emptyTries = useRef(0);
+  const listenRef = useRef<{ start: () => void } | null>(null);
+  const [speaking, setSpeaking] = useState(false);
+  const listen = useListen((spoken) => { emptyTries.current = 0; sendText(spoken); }, () => {
+    if (talkRef.current && emptyTries.current < 2) { emptyTries.current++; listenRef.current?.start(); }
+  });
+  listenRef.current = listen;
+  async function say(text: string) { setSpeaking(true); await speak(text); setSpeaking(false); }
 
   async function sendText(t: string) {
     t = t.trim();
@@ -93,7 +101,7 @@ export function Chef({ d }: { d: TeamData }) {
       setFields((f) => ({ ...f, ...r.fields }));
       setChat((c) => [...c, { role: "ai", text: r.reply }]);
       if (talkRef.current) {
-        await speak(r.reply);            // Chef answers out loud…
+        await say(r.reply);              // Chef answers out loud…
         if (talkRef.current && !r.done) listen.start(); // …then listens for the next answer
       }
     } catch (x: any) { setErr(x.message); } finally { setBusy(false); }
@@ -105,7 +113,7 @@ export function Chef({ d }: { d: TeamData }) {
     if (talk) { setTalk(false); stopSpeaking(); listen.stop(); return; }
     if (!speechSupported()) return setErr("This browser can't listen. Use Chrome, Edge or Safari, or tap the mic on your keyboard.");
     setTalk(true); talkRef.current = true;
-    await speak(chatRef.current[chatRef.current.length - 1]?.text || "");
+    await say(chatRef.current[chatRef.current.length - 1]?.text || "");
     if (talkRef.current) listen.start();
   }
 
@@ -123,17 +131,26 @@ export function Chef({ d }: { d: TeamData }) {
         <div className="panel">
           <div className="row" style={{ marginBottom: 10 }}>
             <button type="button" className={"btn " + (talk ? "honey" : "primary")} onClick={toggleTalk} style={{ fontSize: 16, padding: "12px 18px" }}>
-              {talk ? (listen.listening ? "● Listening… tap to stop" : busy ? "Thinking…" : "Speaking… tap to stop") : "🎤 Start talking"}
+              {talk ? (listen.listening ? "● Listening… tap to stop" : busy ? "Thinking…" : speaking ? "Speaking… tap to stop" : "Stop talking mode") : "🎤 Start talking"}
             </button>
             {listen.interim && <span className="note">{listen.interim}</span>}
           </div>
           {listen.error && <p className="err">{listen.error}</p>}
+          {talk && !listen.listening && !busy && !speaking && (
+            <div className="row" style={{ marginBottom: 8 }}>
+              <button className="btn honey" type="button" onClick={() => { emptyTries.current = 0; listen.start(); }}>🎤 Tap to answer</button>
+              <button className="btn small" type="button" onClick={() => sendText("Skip this one, let's go to the next question.")}>Skip this question</button>
+            </div>
+          )}
           <div className="chat" aria-live="polite">{chat.map((m, i) => <div key={i} className={`msg ${m.role}`}>{m.text}</div>)}</div>
           <form className="row" onSubmit={send} style={{ marginTop: 10 }}>
             <input id="chef-in" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Or type here to correct…" autoComplete="off" style={{ flex: 1, minWidth: 0 }} />
             <button className="btn" disabled={busy}>{busy ? "…" : "Send"}</button>
           </form>
-          <div style={{ marginTop: 8 }}><MicButton label="Say one answer" onText={(t) => sendText(t)} /></div>
+          <div className="row" style={{ marginTop: 8 }}>
+            <MicButton label="Say one answer" onText={(t) => sendText(t)} />
+            <button className="btn small" type="button" disabled={busy} onClick={() => sendText("Skip this one, let's go to the next question.")}>Skip this question</button>
+          </div>
           {err && <p className="err">{err}</p>}
           <button className="btn small" type="button" style={{ marginTop: 8 }} onClick={() => { setTalk(false); stopSpeaking(); listen.stop(); setChat([CHEF_HELLO]); setFields({}); }}>Start over</button>
         </div>

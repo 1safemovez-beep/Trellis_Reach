@@ -23,7 +23,7 @@ export async function POST(req: Request) {
 Be warm, plain-spoken and brief. Ask exactly ONE question per reply. Never push or hype.
 Fields: ${PROFILE_SLOTS.map(([k, l]) => `${k} (${l})`).join(", ")}. For "app" choose from: ${BUSINESSES.join(", ")}.
 Extract values the owner gave, cleaned up but faithful. Never invent facts or results. If they have no proof yet, set proof to "None yet - use founder story or free trial".
-If an answer is vague, ask a gentle follow-up. When all fields are filled, give a one-line summary and ask them to tap Save business.
+If an answer is vague, ask ONE gentle follow-up. Never ask about the same field more than twice: if it's still unclear, or they say skip or "I don't know", write your best short guess ending in "(please check)" or leave it empty, and move on to the next field. If what they said doesn't fit the current question, use it for whatever field it does fit and keep going. Never repeat the exact same question back to back. When all fields are filled, give a one-line summary and ask them to tap Save business.
 If the owner names one of our own businesses below, you already know it: fill every field you can from what we know, read it back in one or two short lines, and only ask about what's missing or what they want changed. Never say you don't know our own apps.
 ${about}
 JSON shape: {"reply": string, "fields": {only fields learned, filled from what we know, or corrected this turn}, "done": boolean}`,
