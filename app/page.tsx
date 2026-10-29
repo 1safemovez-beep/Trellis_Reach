@@ -19,7 +19,12 @@ export default function Hivecast() {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [q, setQ] = useState("");
-  const [answer, setAnswer] = useState("");
+  const [chat, setChat] = useState<{ role: "ai" | "me"; text: string }[]>([
+    { role: "ai", text: "Hi! I'm the Hivecast assistant. Ask me anything about our apps, services or pricing, and a person can always step in." },
+  ]);
+  const [thinking, setThinking] = useState(false);
+  const chatEnd = useRef<HTMLDivElement>(null);
+  useEffect(() => { chatEnd.current?.scrollIntoView({ block: "nearest" }); }, [chat, thinking]);
   const path = PATHS.find((p) => p.id === pathId);
   const formRef = useRef<HTMLFormElement>(null);
   const [fillNote, setFillNote] = useState("");
@@ -82,13 +87,16 @@ export default function Hivecast() {
     setView("later");
   }
 
-  async function ask(e: FormEvent) {
-    e.preventDefault();
-    if (!q.trim()) return setAnswer("Type a question first.");
-    setAnswer("Thinking…");
-    try { const r = await post("/api/qa", { question: q }); setAnswer(r.answer); }
-    catch (x: any) { setAnswer(x.message); }
+  async function sendChat(text: string) {
+    const t = text.trim();
+    if (!t || thinking) return;
+    const history = chat.slice(1);
+    setChat((c) => [...c, { role: "me", text: t }]); setQ(""); setThinking(true);
+    try { const r = await post("/api/qa", { question: t, history }); setChat((c) => [...c, { role: "ai", text: r.answer }]); }
+    catch (x: any) { setChat((c) => [...c, { role: "ai", text: x.message }]); }
+    finally { setThinking(false); }
   }
+  function ask(e: FormEvent) { e.preventDefault(); sendChat(q); }
 
   return (
     <main className="wrap" style={{ paddingBlock: "24px 60px", display: "grid", gap: 16 }}>
@@ -173,15 +181,19 @@ export default function Hivecast() {
       </div>
 
       <div className="grid2">
-        <div className="panel">
-          <h3>Questions?</h3>
-          <p className="note">Our AI answers right away, and a person can always step in.</p>
+        <div className="panel" id="chat">
+          <h3>💬 Chat with us</h3>
+          <p className="note" style={{ margin: 0 }}>Our AI answers right away, and a person can always step in.</p>
+          <div className="chatbox" aria-live="polite">
+            {chat.map((m, i) => <div key={i} className={`msg ${m.role}`}>{m.text}</div>)}
+            {thinking && <div className="msg ai">…</div>}
+            <div ref={chatEnd} />
+          </div>
           <form className="row" onSubmit={ask}>
-            <input id="qa-in" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ask a question…" style={{ flex: 1, minWidth: 0 }} />
-            <button className="btn primary">Ask</button>
+            <input id="qa-in" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Type a message…" style={{ flex: 1, minWidth: 0 }} />
+            <button className="btn primary" disabled={thinking}>Send</button>
           </form>
-          <div style={{ marginTop: 8 }}><MicButton label="Ask out loud" onText={(t) => setQ(t)} /></div>
-          {answer && <div className="out" style={{ marginTop: 10 }}>{answer}</div>}
+          <div style={{ marginTop: 8 }}><MicButton label="Talk instead" onText={sendChat} /></div>
         </div>
         <div className="panel">
           <h3>Who we help</h3>

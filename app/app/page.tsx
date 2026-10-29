@@ -4,10 +4,10 @@ import { supabase } from "@/lib/supabaseClient";
 import { useTeamData } from "@/lib/useTeamData";
 import { ToastProvider } from "@/components/ui";
 import { Board, Chef, Create } from "@/components/sectionsA";
-import { Calendar, Community, FollowUp, Leads, Settings } from "@/components/sectionsB";
+import { Calendar, Community, FollowUp, Graphs, Leads, Settings } from "@/components/sectionsB";
 
 const TABS = [
-  ["board", "Money Board"], ["chef", "Marketing Chef"], ["create", "Create"], ["leads", "Leads & Data"],
+  ["board", "Money Board"], ["chef", "Marketing Chef"], ["create", "Create"], ["graphs", "Graphs"], ["leads", "Leads & Data"],
   ["followup", "Follow-up"], ["calendar", "Calendar"], ["community", "Community"], ["settings", "Settings"],
 ] as const;
 
@@ -80,6 +80,7 @@ export default function Dashboard() {
         {tab === "board" && <Board d={d} go={go} />}
         {tab === "chef" && <Chef d={d} />}
         {tab === "create" && <Create d={d} />}
+        {tab === "graphs" && <Graphs d={d} />}
         {tab === "leads" && <Leads d={d} />}
         {tab === "followup" && <FollowUp d={d} />}
         {tab === "calendar" && <Calendar d={d} />}

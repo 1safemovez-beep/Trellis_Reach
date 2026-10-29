@@ -169,3 +169,27 @@ button.level[aria-expanded="true"]{background:var(--honey-soft)}
 .noir .kpi:nth-child(3) .v,.noir .kpi:nth-child(5) .v{color:var(--n3);text-shadow:0 0 8px color-mix(in srgb,var(--n3) 70%,transparent)}
 .noir .kpi:nth-child(4) .v{color:var(--n4);text-shadow:0 0 8px color-mix(in srgb,var(--n4) 70%,transparent)}
 .noir .btn.primary{color:#0B0B0E}
+/* Ad preview: looks like a sponsored post in a feed */
+.ad{border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden;max-width:460px;margin-bottom:12px;box-shadow:0 6px 24px -14px rgba(18,26,43,.35)}
+.ad-head{display:flex;align-items:center;gap:10px;padding:12px 12px 6px}
+.ad-head small{display:block;color:var(--muted);font-size:12px}
+.ad-logo{width:32px;height:36px;font-size:12px}
+.ad-text{margin:0;padding:4px 12px 10px;white-space:pre-wrap;font-size:14px}
+.ad-media{display:block;width:100%;aspect-ratio:16/9;background:#000;border:0}
+.ad-art{position:relative;overflow:hidden;isolation:isolate;display:grid;place-items:center;padding:18px;text-align:center}
+.ad-art::after{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(ellipse at center,rgba(14,22,38,.35),rgba(14,22,38,.7))}
+.ad-art span{font:600 22px/1.2 var(--display);color:#F3EEE2;text-shadow:0 2px 12px rgba(0,0,0,.6);max-width:90%}
+.ad-cta{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:var(--bg);color:inherit;text-decoration:none;border-top:1px solid var(--line)}
+.ad-cta small{display:block;color:var(--muted);font-size:11px}
+.ad-cta b{font-size:14px}
+.ad-cta .btn{white-space:nowrap;flex:none}
+/* Hivecast chat */
+.chatbox{display:grid;gap:8px;max-height:360px;overflow-y:auto;padding:4px;margin-block:8px}
+
+/* Mic buttons: gold so they're easy to spot */
+.mic{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--honey);background:var(--honey-soft);color:var(--ink);font:600 14px var(--body);padding:6px 14px 6px 6px;border-radius:999px;cursor:pointer;justify-self:start}
+.mic-dot{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--honey);font-size:15px}
+.mic.on{background:var(--honey);color:#121A2B}
+.mic.on .mic-dot{background:#fff;animation:micpulse 1.2s ease-in-out infinite}
+@keyframes micpulse{50%{box-shadow:0 0 0 8px color-mix(in srgb,var(--honey) 35%,transparent)}}
+@media (prefers-reduced-motion:reduce){.mic.on .mic-dot{animation:none}}

@@ -83,30 +83,39 @@ export function VideoMaker({ words, ensureSaved, auto = 0 }: { words: string; en
       </div>
       {state === "making" && <p className="note" style={{ margin: 0 }}>HeyGen is recording it. You can keep working; it's saved to your library and will finish there.</p>}
       {url && (<>
-        <video className="hive-video" src={url} controls playsInline />
+        <p className="note" style={{ margin: 0 }}>✅ Your video is ready and saved to the library.</p>
+        <video className="hive-video" src={url} controls playsInline autoPlay />
         <div className="row"><a className="btn small" href={url} target="_blank" rel="noreferrer">Download</a><span className="ai-tag">Made with AI</span></div>
       </>)}
     </div>
   );
 }
 
-// Plays a saved video. Asks for a fresh link each time because HeyGen links expire.
+// Shows a saved video in the library. It loads by itself, keeps checking while HeyGen is
+// still making it, and asks for a fresh link each time because HeyGen links expire.
 export function PlaySaved({ videoId, status }: { videoId: string; status?: string | null }) {
   const [url, setUrl] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
-  async function load() {
-    setMsg("Loading…");
-    try {
-      const s = await api("/api/video/status", { videoId });
-      if (s.status === "completed") { setUrl(s.url); setMsg(""); }
-      else setMsg(s.status === "failed" ? s.error || "This video failed." : "Still being made. Check back in a few minutes.");
-    } catch (x: any) { setMsg(x.message); }
-  }
-  if (url) return <video className="hive-video" src={url} controls playsInline style={{ marginTop: 6, maxWidth: 360 }} />;
-  return (
-    <div className="row" style={{ marginTop: 4 }}>
-      <button className="btn small" type="button" onClick={load}>▶ {status === "completed" ? "Play video" : "Check video"}</button>
-      {msg && <span className="note">{msg}</span>}
-    </div>
-  );
+  const timer = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => {
+    let alive = true;
+    async function load() {
+      try {
+        const s = await api("/api/video/status", { videoId });
+        if (!alive) return;
+        if (s.status === "completed") { setUrl(s.url); setMsg(""); return; }
+        if (s.status === "failed") { setMsg(s.error || "This video failed."); return; }
+        setMsg("🎬 Video is being made… it shows here when ready.");
+        timer.current = setTimeout(load, 15000);
+      } catch (x: any) { if (alive) setMsg(x.message); }
+    }
+    if (status === "failed") setMsg("This video failed. Make it again from Create.");
+    else load();
+    return () => { alive = false; clearTimeout(timer.current); };
+  }, [videoId, status]);
+  if (url) return (<>
+    <video className="hive-video" src={url} controls playsInline style={{ marginTop: 6, maxWidth: 360 }} />
+    <span className="ai-tag">Made with AI</span>
+  </>);
+  return msg ? <p className="note" style={{ margin: "4px 0 0" }}>{msg}</p> : null;
 }

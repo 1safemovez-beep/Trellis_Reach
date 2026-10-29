@@ -52,19 +52,10 @@ export function Leads({ d }: { d: TeamData }) {
   }
 
   return (
-    <section className="view noir">
+    <section className="view">
       <div className="row" style={{ justifyContent: "space-between" }}>
-        <Head eyebrow="Data center" title="Leads, sources and income" />
+        <Head eyebrow="Data center" title="Leads and income" lead={`${total} leads · ${st.Won} won · ${money(rev)} closed · ${conv}% close rate. See the Graphs tab for charts.`} />
         <button className="btn primary" type="button" onClick={() => exportExcel(d).catch((x) => toast(`Export failed: ${x.message}`))}>Download Excel</button>
-      </div>
-      <div className="kpis">
-        {([["Leads", total], ["Booked", st.Booked], ["Won", st.Won], ["Close rate", conv + "%"], ["Income", money(rev)]] as [string, any][]).map(([l, v]) => (
-          <div className="kpi" key={l}><div className="v">{v}</div><div className="l">{l}</div></div>
-        ))}
-      </div>
-      <div className="grid2">
-        <div className="panel"><h3>Leads by source</h3><Bars pairs={SOURCES.map((s) => [s, d.leads.filter((l) => l.source === s).length])} />{!total && <p className="note">No leads yet. Each Hivecast sign-up adds to this graph.</p>}</div>
-        <div className="panel pipeline"><h3>Pipeline</h3><Bars pairs={STAGES.map((s) => [s, st[s]])} /></div>
       </div>
       <div className="panel">
         <div className="row" style={{ justifyContent: "space-between", marginBottom: 8 }}>
@@ -104,9 +95,42 @@ export function Leads({ d }: { d: TeamData }) {
             <label>Closer<input id="al-closer" name="closer" placeholder="Alicia" /></label>
           </div>
           <label>Notes<textarea id="al-notes" name="notes" /></label>
+          <MicButton label="Say the notes" onText={(t) => { const el = document.getElementById("al-notes") as HTMLTextAreaElement | null; if (el) el.value = (el.value ? el.value + " " : "") + t; }} />
           <div><button className="btn primary">Add lead</button></div>
         </form>
       </details>
+    </section>
+  );
+}
+
+// Graphs tab: the black "graph room" with neon charts.
+export function Graphs({ d }: { d: TeamData }) {
+  const { st, rev, total } = stats(d);
+  const conv = total ? Math.round((st.Won / total) * 100) : 0;
+  const won = d.leads.filter((l) => l.stage === "Won");
+  const byBiz: [string, number][] = Array.from(new Set(d.leads.map((l) => l.business || "Undecided")))
+    .map((b) => [b, d.leads.filter((l) => (l.business || "Undecided") === b).length] as [string, number])
+    .sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const days: [string, number][] = Array.from({ length: 14 }, (_, i) => {
+    const day = new Date(); day.setHours(0, 0, 0, 0); day.setDate(day.getDate() - (13 - i));
+    const next = +day + 864e5;
+    return [day.toLocaleDateString([], { month: "short", day: "numeric" }), d.leads.filter((l) => +new Date(l.created_at) >= +day && +new Date(l.created_at) < next).length];
+  });
+  return (
+    <section className="view noir">
+      <Head eyebrow="Graphs" title="How the money is moving" lead="Live from your database. Every sign-up, booking and win updates these right away." />
+      <div className="kpis">
+        {([["Leads", total], ["Booked", st.Booked], ["Won", st.Won], ["Close rate", conv + "%"], ["Income", money(rev)]] as [string, any][]).map(([l, v]) => (
+          <div className="kpi" key={l}><div className="v">{v}</div><div className="l">{l}</div></div>
+        ))}
+      </div>
+      <div className="grid2">
+        <div className="panel"><h3>Leads by source</h3><Bars pairs={SOURCES.map((s) => [s, d.leads.filter((l) => l.source === s).length])} />{!total && <p className="note">No leads yet. Each Hivecast sign-up adds to this graph.</p>}</div>
+        <div className="panel pipeline"><h3>Pipeline</h3><Bars pairs={STAGES.map((s) => [s, st[s]])} /></div>
+        <div className="panel"><h3>Income by source</h3><Bars isMoney pairs={SOURCES.map((s) => [s, won.filter((l) => l.source === s).reduce((a, l) => a + (+l.value || 0), 0)])} />{!rev && <p className="note">Mark a lead Won and add its value to fill this graph.</p>}</div>
+        <div className="panel pipeline"><h3>New leads, last 14 days</h3><Bars pairs={days} /></div>
+        <div className="panel"><h3>Leads by business</h3>{byBiz.length ? <Bars pairs={byBiz} /> : <p className="note">Shows once leads arrive.</p>}</div>
+      </div>
     </section>
   );
 }
@@ -182,6 +206,7 @@ export function Calendar({ d }: { d: TeamData }) {
         <form className="panel form" onSubmit={add}>
           <h3>Add to the calendar</h3>
           <label>What<input id="c-title" name="title" required placeholder="Booking call with Maria" /></label>
+          <MicButton label="Say what it is" onText={(t) => { const el = document.getElementById("c-title") as HTMLInputElement | null; if (el) el.value = t; }} />
           <div className="two">
             <label>Type<select id="c-kind" name="kind"><option>Booking call</option><option>Webinar</option><option>Commercial goes live</option><option>Follow-up</option></select></label>
             <label>When<input id="c-when" name="when" type="datetime-local" required /></label>
@@ -247,6 +272,7 @@ export function Community({ d }: { d: TeamData }) {
         <div className="panel">
           <h3>Community board</h3>
           <form className="row" onSubmit={post}><input id="post-in" value={text} onChange={(e) => setText(e.target.value)} placeholder="Share a win or ask a question" style={{ flex: 1, minWidth: 0 }} /><button className="btn primary">Post</button></form>
+          <div style={{ marginTop: 8 }}><MicButton label="Say your post" onText={(t) => setText((v) => (v ? v + " " : "") + t)} /></div>
           <div style={{ marginTop: 8 }}>{d.posts.length ? d.posts.map((p) => <div className="post" key={p.id}><span className="who">{p.author_email?.split("@")[0] || "Member"} · {when(p.created_at)}</span><span>{p.text}</span></div>) : <Empty>No posts yet. Share the first win.</Empty>}</div>
         </div>
       </div>

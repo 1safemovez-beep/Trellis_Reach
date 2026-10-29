@@ -6,6 +6,7 @@ import { BUSINESSES, CONTENT_FORMATS, PROFILE_SLOTS, SOURCES, VIDEO_MODES } from
 import type { TeamData } from "@/lib/useTeamData";
 import { Bars, copyText, Empty, Head, money, useToast, when } from "./ui";
 import { PlaySaved, VideoMaker } from "./video";
+import { AdPreview, adCopy, isAdFormat } from "./ad";
 
 export function calItems(d: TeamData) {
   return [
@@ -132,6 +133,7 @@ export function Chef({ d }: { d: TeamData }) {
             <input id="chef-in" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Or type here to correct…" autoComplete="off" style={{ flex: 1, minWidth: 0 }} />
             <button className="btn" disabled={busy}>{busy ? "…" : "Send"}</button>
           </form>
+          <div style={{ marginTop: 8 }}><MicButton label="Say one answer" onText={(t) => sendText(t)} /></div>
           {err && <p className="err">{err}</p>}
           <button className="btn small" type="button" style={{ marginTop: 8 }} onClick={() => { setTalk(false); stopSpeaking(); listen.stop(); setChat([CHEF_HELLO]); setFields({}); }}>Start over</button>
         </div>
@@ -234,6 +236,7 @@ export function Create({ d }: { d: TeamData }) {
         </div>
         <div className="panel">
           <h3>Result</h3>
+          {out && isAdFormat(out.format) && <AdPreview business={biz} title={out.title} text={out.voiceover || adCopy(out.script)} />}
           {out ? <div className="out">{text}</div> : <Empty>Your script appears here.</Empty>}
           {out && (
             <div className="row" style={{ marginTop: 10 }}>
@@ -252,7 +255,7 @@ export function Create({ d }: { d: TeamData }) {
             <thead><tr><th>Title</th><th>Type</th><th>Business</th><th>Status</th><th>Goes out</th></tr></thead>
             <tbody>{d.content.map((c) => (
               <tr key={c.id}>
-                <td><b>{c.title}</b>{c.example && <> <span className="pill muted">Example</span></>}<details><summary className="note" style={{ cursor: "pointer" }}>Show script</summary><div className="out" style={{ marginTop: 6 }}>{c.body}</div></details></td>
+                <td><b>{c.title}</b>{c.example && <> <span className="pill muted">Example</span></>}{isAdFormat(c.type) && <details><summary className="note" style={{ cursor: "pointer" }}>Show ad</summary><AdPreview business={c.business || "Trellis Reach"} title={c.title} text={adCopy(c.body)} /></details>}<details><summary className="note" style={{ cursor: "pointer" }}>Show script</summary><div className="out" style={{ marginTop: 6 }}>{c.body}</div></details></td>
                 <td>{c.type}{c.video_mode && c.video_mode !== "No video" && <div className="note">{c.video_mode}</div>}{c.video_id && <PlaySaved videoId={c.video_id} status={c.video_status} />}</td>
                 <td>{c.business}</td>
                 <td><span className={"pill " + (c.status === "Scheduled" ? "honey" : "muted")}>{c.status}</span></td>

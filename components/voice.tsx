@@ -93,12 +93,12 @@ export function MicButton({ onText, label = "Speak" }: { onText: (t: string) => 
     <span style={{ display: "inline-grid", gap: 4 }}>
       <button
         type="button"
-        className={"btn small" + (listening ? " honey" : "")}
+        className={"mic" + (listening ? " on" : "")}
         onClick={listening ? stop : start}
         aria-pressed={listening}
         aria-label={listening ? "Stop listening" : label}
       >
-        {listening ? "● Listening… tap to stop" : `🎤 ${label}`}
+        <span className="mic-dot" aria-hidden="true">🎤</span>{listening ? "Listening… tap to stop" : label}
       </button>
       {interim && <span className="note">{interim}</span>}
       {error && <span className="err">{error}</span>}
