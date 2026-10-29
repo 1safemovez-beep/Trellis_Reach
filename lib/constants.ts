@@ -9,12 +9,13 @@ export const BUSINESSES = [
 export type Path = { id: string; name: string; hint: string };
 export const PATHS: Path[] = [
   { id: "client", name: "High-stakes client / business", hint: "Ads that pay back. Marketing app tiers or done-for-you." },
-  { id: "builder", name: "Builder with an idea", hint: "Seed Loop: test apps, earn points, get yours built." },
+  { id: "builder", name: "Builder with an idea", hint: "Seed Loop: test apps, earn points, learn real skills like cybersecurity and AI-rules readiness, and get yours built." },
   { id: "creator", name: "Creator", hint: "Paid video and ad work for mall businesses." },
   { id: "appuser", name: "App user", hint: "Find AI tools in the mall." },
   { id: "entre", name: "Entrepreneur / founder / tech founder", hint: "Learn and grow every part of the business." },
   { id: "build", name: "QVTrellis build", hint: "Build it yourself, done for you, or white label." },
   { id: "rai", name: "Responsible AI Check", hint: "Safety pre-test before official certification." },
+  { id: "ready", name: "Cyber & AI rules readiness", hint: "Get ready for CMMC and new AI laws before they hit. We test your setup and help you fix gaps before your official assessment." },
   { id: "undecided", name: "Undecided", hint: "Show me everything." },
 ];
 
@@ -58,7 +59,7 @@ export const PLUGINS: { name: string; detail: string; env: string; alt?: string[
 export const LEVELS = [
   ["PushPilot affiliate", "Share links and ready-made ads. Earn per referral. No funnel training."],
   ["Creator", "Make ads and videos for mall businesses. Paid per piece."],
-  ["Seed Loop member", "Test apps for points, push marketing, learn the funnel step by step."],
+  ["Seed Loop member", "Test apps for points, push marketing, learn the funnel step by step, and train to help on cyber and AI-rules readiness checks for points or pay."],
   ["Entrepreneur", "Run your own campaigns, full funnel access, webinars."],
   ["Founder", "Everything above plus one-on-one strategy and guest spots."],
   ["Tech founder", "Everything above plus builds into the mall and white label."],
@@ -93,6 +94,7 @@ export const CALL_CONSENT_TEXT =
 
 export const CLIENT_SERVICES = [
   "AI phone calls to my leads", "AI booking", "AI email follow-up", "Ads and AI videos", "Hivecast funnel for my business",
+  "Cyber & AI rules readiness check (CMMC, new AI laws)",
 ];
 export const CLIENT_CONSENT_PROMISE =
   "My customers only get AI calls or texts after they agree first, through my Trellis Reach sign-up form or with written consent I can show. I won't upload lists of people who didn't agree.";
