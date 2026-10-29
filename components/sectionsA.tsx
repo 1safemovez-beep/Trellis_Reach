@@ -164,13 +164,20 @@ export function Create({ d }: { d: TeamData }) {
   const [out, setOut] = useState<any>(null);
   const [whenAt, setWhenAt] = useState("");
   const [savedId, setSavedId] = useState<string | null>(null);
+  // Two ways to make an ad or commercial: the client works with the AI, or the AI does it all.
+  const [how, setHow] = useState<"together" | "ai">("together");
+  const [autoRun, setAutoRun] = useState(0);
   const isVideo = /video|commercial|outreach|invite/i.test(format) || mode !== "none";
 
   async function go() {
     setErr(""); setBusy(true); setSavedId(null);
     try {
       const profile = d.businesses.find((b) => b.business_name === biz) || { business_name: biz };
-      setOut(await api("/api/agents/create", { format, mode, photoConsent: consent, description: desc, vision, profile }));
+      const allAI = how === "ai";
+      setOut(await api("/api/agents/create", allAI
+        ? { format, mode: "pro", profile }
+        : { format, mode, photoConsent: consent, description: desc, vision, profile }));
+      setAutoRun(allAI && /video|commercial/i.test(format) ? Date.now() : 0);
     } catch (x: any) { setErr(x.message); } finally { setBusy(false); }
   }
   const text = out ? `${out.title}\n\n${out.script}${out.shots ? `\n\nSHOT LIST\n${out.shots}` : ""}\n\nKey points covered: ${(out.keyPointsCovered || []).join(" · ")}` : "";
@@ -200,6 +207,14 @@ export function Create({ d }: { d: TeamData }) {
           <label>Business<select id="cr-biz" value={biz} onChange={(e) => setBiz(e.target.value)}>{names.map((n) => <option key={n}>{n}</option>)}</select></label>
           <label>What to make<select id="cr-fmt" value={format} onChange={(e) => setFormat(e.target.value)}>{CONTENT_FORMATS.map((f) => <option key={f}>{f}</option>)}</select></label>
           <div>
+            <div className="eyebrow" style={{ marginBottom: 6 }}>How do you want to make it?</div>
+            <div className="modes">
+              <button type="button" className="mode" aria-pressed={how === "together"} onClick={() => setHow("together")}><b>🤝 Work with the AI</b><small>You add your vision, photo and words. The AI builds it with you and you approve every line.</small></button>
+              <button type="button" className="mode" aria-pressed={how === "ai"} onClick={() => setHow("ai")}><b>⚡ All AI</b><small>One tap. The AI writes it and, for videos and commercials, makes the video too.</small></button>
+            </div>
+          </div>
+          {how === "together" && (<>
+          <div>
             <div className="eyebrow" style={{ marginBottom: 6 }}>Video mode (plug-in slots)</div>
             <div className="modes">{VIDEO_MODES.map((m) => <button key={m.id} type="button" className="mode" aria-pressed={mode === m.id} onClick={() => setMode(m.id)}><b>{m.label}</b><small>{m.hint}</small></button>)}</div>
           </div>
@@ -214,7 +229,8 @@ export function Create({ d }: { d: TeamData }) {
           </>)}
           <label>Your vision (optional)<textarea id="cr-vision" value={vision} onChange={(e) => setVision(e.target.value)} placeholder="Wardrobe, setting, mood, anything you want in it" /></label>
           <MicButton label="Say your vision" onText={(t) => setVision((v) => (v ? v + " " : "") + t)} />
-          <div className="row"><button className="btn primary" type="button" onClick={go} disabled={busy}>{busy ? "Writing…" : "Create it"}</button>{err && <span className="err">{err}</span>}</div>
+          </>)}
+          <div className="row"><button className="btn primary" type="button" onClick={go} disabled={busy}>{busy ? "Writing…" : how === "ai" ? "⚡ Make it all with AI" : "Create it"}</button>{err && <span className="err">{err}</span>}</div>
         </div>
         <div className="panel">
           <h3>Result</h3>
@@ -226,7 +242,7 @@ export function Create({ d }: { d: TeamData }) {
               <label style={{ display: "flex", gap: 6, alignItems: "center" }}>Schedule<input id="cr-when" type="datetime-local" value={whenAt} onChange={(e) => setWhenAt(e.target.value)} style={{ width: "auto" }} /></label>
             </div>
           )}
-          {out && isVideo && <VideoMaker words={out.voiceover || out.script} ensureSaved={saveRow} />}
+          {out && isVideo && <VideoMaker words={out.voiceover || out.script} ensureSaved={saveRow} auto={autoRun} />}
         </div>
       </div>
       <div className="panel">

@@ -7,7 +7,7 @@ type Opt = { id: string; name: string; language?: string; gender?: string; mine?
 let cached: { avatars: Opt[]; voices: Opt[] } | null = null;
 
 // HeyGen video maker. The avatar reads the words in the box exactly as written.
-export function VideoMaker({ words, ensureSaved }: { words: string; ensureSaved: () => Promise<string | null> }) {
+export function VideoMaker({ words, ensureSaved, auto = 0 }: { words: string; ensureSaved: () => Promise<string | null>; auto?: number }) {
   const [text, setText] = useState(words);
   const [opts, setOpts] = useState(cached);
   const [avatarId, setAvatarId] = useState("");
@@ -28,6 +28,12 @@ export function VideoMaker({ words, ensureSaved }: { words: string; ensureSaved:
       .then((r) => { cached = r; setOpts(r); setState("idle"); })
       .catch((x) => { setErr(x.message); setState("idle"); });
   }, [opts]);
+
+  // "All AI": start the video by itself once the avatar and voice lists are ready.
+  const started = useRef(0);
+  useEffect(() => {
+    if (auto && started.current !== auto && opts && avatarId && voiceId && text.trim()) { started.current = auto; make(); }
+  }, [auto, opts, avatarId, voiceId, text]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function poll(videoId: string) {
     try {
