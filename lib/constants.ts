@@ -86,3 +86,13 @@ export const CALLER = {
   optOutUrl: (process.env.NEXT_PUBLIC_SITE_URL || "https://qvtrellis.net") + "/optout",
 };
 export const OPTED_OUT = "OPTED OUT";
+
+// Exact consent wording. Saved with each lead (with the time) as proof of consent before any AI call.
+export const CALL_CONSENT_TEXT =
+  "I agree to get an AI-assisted phone call and texts at this number about the business I picked. The AI will tell me it's an AI, give me information about the business, answer my questions and can help me book a time. Consent isn't required to buy. I can opt out any time: press 1 on any AI call, reply STOP to texts, or visit qvtrellis.net/optout.";
+
+export const CLIENT_SERVICES = [
+  "AI phone calls to my leads", "AI booking", "AI email follow-up", "Ads and AI videos", "Hivecast funnel for my business",
+];
+export const CLIENT_CONSENT_PROMISE =
+  "My customers only get AI calls or texts after they agree first, through my Trellis Reach sign-up form or with written consent I can show. I won't upload lists of people who didn't agree.";

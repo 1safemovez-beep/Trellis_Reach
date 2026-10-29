@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { BUSINESSES, LEVELS, PATHS, SOURCES } from "@/lib/constants";
+import { BUSINESSES, CALL_CONSENT_TEXT, CLIENT_CONSENT_PROMISE, CLIENT_SERVICES, LEVELS, PATHS, SOURCES } from "@/lib/constants";
 import { clean, fail, rateLimited, supabaseAdmin } from "@/lib/server";
 
 // Public lead capture for the Hivecast funnel. Visitors are not signed in, so this route
@@ -10,30 +10,53 @@ export async function POST(req: Request) {
   if (!b) return fail("Something went wrong with the form. Please try again.");
   if (clean(b.website)) return NextResponse.json({ ok: true }); // honeypot: bots fill hidden fields
 
+  const kind = ["keep-posted", "qualify", "call-request", "client-signup"].includes(b.kind) ? b.kind : "qualify";
+  const now = new Date().toISOString();
   const email = clean(b.email, 200).toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail("Enter a valid email address.");
-  const keepPosted = b.kind === "keep-posted";
-  const name = clean(b.name, 120) || email.split("@")[0];
-  const path = PATHS.find((p) => p.id === b.pathId)?.name || (keepPosted ? "Keep me posted" : "");
-  if (!keepPosted && !path) return fail("Pick who you are first.");
-  const business = BUSINESSES.includes(b.business) ? b.business : "Undecided";
-  const source = SOURCES.includes(b.source) ? b.source : "Direct";
   const phone = clean(b.phone, 40);
   const consent = Boolean(b.consent);
-  const level = LEVELS[Number(b.level) - 1]?.[0];
+  if (kind !== "call-request" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail("Enter a valid email address.");
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail("That email doesn't look right.");
+  const source = SOURCES.includes(b.source) ? b.source : "Direct";
+  const business = BUSINESSES.includes(b.business) ? b.business : "Undecided";
+  const notes: string[] = [];
+  // Proof of consent, saved before any call can happen.
+  const consentNote = (where: string) => `Consent to AI calls/texts given ${now} via ${where}: "${CALL_CONSENT_TEXT}"`;
 
-  const { data, error } = await supabaseAdmin()
-    .from("leads")
-    .insert({
-      name, email, phone: phone || null, business, path, source,
-      stage: keepPosted ? "Nurture" : "New",
-      goal: clean(b.goal, 500) || null,
-      notes: level ? `Level: ${level}` : null,
-      consent_email: keepPosted || consent,
-      consent_sms_calls: consent && Boolean(phone),
-    })
-    .select("id")
-    .single();
+  let row: Record<string, any>;
+  if (kind === "call-request") {
+    if (phone.replace(/\D/g, "").length < 10) return fail("Enter your phone number with area code.");
+    if (!consent) return fail("Please tick the box to agree to the AI call first.");
+    notes.push("Call requested from Hivecast", consentNote("Hivecast call box"));
+    row = { name: clean(b.name, 120) || "Call request", email: email || null, phone, business, path: "Requested an AI call", source,
+      stage: "New", consent_email: Boolean(email), consent_sms_calls: true };
+  } else if (kind === "client-signup") {
+    const company = clean(b.company, 160);
+    if (!company) return fail("Enter your business name.");
+    const services = (Array.isArray(b.services) ? b.services : []).filter((x: string) => CLIENT_SERVICES.includes(x));
+    if (!services.length) return fail("Pick at least one service.");
+    if (!b.agree) return fail("Please agree to the client terms.");
+    if (services.some((x: string) => /call|booking/i.test(x)) && !b.customerConsent) return fail("Please confirm your customers agree before AI calls them.");
+    notes.push(`Client sign-up: ${company}${clean(b.industry, 80) ? ` (${clean(b.industry, 80)})` : ""}${clean(b.site, 200) ? ` · ${clean(b.site, 200)}` : ""}`,
+      `Services: ${services.join(", ")}`, `Agreed to client terms ${now}`);
+    if (b.customerConsent) notes.push(`Promised ${now}: "${CLIENT_CONSENT_PROMISE}"`);
+    if (consent && phone) notes.push(consentNote("client sign-up"));
+    row = { name: `${clean(b.name, 120) || email.split("@")[0]} · ${company}`, email, phone: phone || null, business: "QVTrellis builds",
+      path: "High-stakes client / business", source, stage: "New", goal: clean(b.goal, 500) || null,
+      consent_email: true, consent_sms_calls: consent && Boolean(phone) };
+  } else {
+    const keepPosted = kind === "keep-posted";
+    const path = PATHS.find((p) => p.id === b.pathId)?.name || (keepPosted ? "Keep me posted" : "");
+    if (!keepPosted && !path) return fail("Pick who you are first.");
+    const level = LEVELS[Number(b.level) - 1]?.[0];
+    if (level) notes.push(`Level: ${level}`);
+    if (consent && phone) notes.push(consentNote("Hivecast sign-up form"));
+    row = { name: clean(b.name, 120) || email.split("@")[0], email, phone: phone || null, business, path, source,
+      stage: keepPosted ? "Nurture" : "New", goal: clean(b.goal, 500) || null,
+      consent_email: keepPosted || consent, consent_sms_calls: consent && Boolean(phone) };
+  }
+
+  const { data, error } = await supabaseAdmin().from("leads").insert({ ...row, notes: notes.join("\n") || null }).select("id").single();
   if (error) {
     console.error("lead insert", error.message);
     return fail("We couldn't save that just now. Please try again.", 500);

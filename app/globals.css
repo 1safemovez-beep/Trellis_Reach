@@ -193,3 +193,14 @@ button.level[aria-expanded="true"]{background:var(--honey-soft)}
 .mic.on .mic-dot{background:#fff;animation:micpulse 1.2s ease-in-out infinite}
 @keyframes micpulse{50%{box-shadow:0 0 0 8px color-mix(in srgb,var(--honey) 35%,transparent)}}
 @media (prefers-reduced-motion:reduce){.mic.on .mic-dot{animation:none}}
+
+/* AI disclosure */
+.ai-pill{margin-left:8px;border:1px solid color-mix(in srgb,var(--gold) 60%,transparent);background:rgba(212,175,90,.14);color:var(--gold);font:500 11px var(--mono);letter-spacing:.06em;padding:2px 8px;border-radius:999px;cursor:pointer;text-transform:none}
+.hero-link{color:var(--hero-ink);opacity:.85;font-size:14px;text-decoration:underline;text-underline-offset:3px;justify-self:start}
+.linkish{background:none;border:0;padding:0;font:inherit;color:inherit;text-decoration:underline;cursor:pointer}
+.modal-bg{position:fixed;inset:0;z-index:30;background:rgba(10,14,24,.55);display:grid;place-items:end center;padding:16px}
+@media(min-width:561px){.modal-bg{place-items:center}}
+.modal{max-width:440px;width:100%;display:grid;gap:10px;box-shadow:0 20px 50px -20px rgba(0,0,0,.5)}
+.checks{display:grid;gap:6px}
+.checks label{display:flex;gap:8px;align-items:flex-start;font-weight:400;color:var(--ink)}
+.checks input{width:auto;margin-top:3px}

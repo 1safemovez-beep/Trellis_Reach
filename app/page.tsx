@@ -1,6 +1,6 @@
 "use client";
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { BUSINESSES, CALLER, LEVEL_PATHS, LEVELS, PATHS, SOURCES } from "@/lib/constants";
+import { BUSINESSES, CALL_CONSENT_TEXT, CALLER, LEVEL_PATHS, LEVELS, PATHS, SOURCES } from "@/lib/constants";
 import { MicButton } from "@/components/voice";
 import { RoyalBees } from "@/components/bees";
 
@@ -30,6 +30,25 @@ export default function Hivecast() {
   const [fillNote, setFillNote] = useState("");
   const [level, setLevel] = useState(0); // 1-7 when the visitor came from a community invite link
   const [video, setVideo] = useState<{ url: string | null; poster?: string | null } | null>(null);
+  const [notice, setNotice] = useState(false); // AI notice pop-up, shown on the first visit
+  const [callState, setCallState] = useState<"idle" | "busy" | "done">("idle");
+  const [callErr, setCallErr] = useState("");
+
+  useEffect(() => {
+    try { if (!localStorage.getItem("hc-ai-notice")) setNotice(true); } catch { setNotice(true); }
+  }, []);
+  function closeNotice() { setNotice(false); try { localStorage.setItem("hc-ai-notice", "1"); } catch {} }
+
+  async function requestCall(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    setCallState("busy"); setCallErr("");
+    try {
+      await post("/api/leads", { kind: "call-request", name: f.get("name"), phone: f.get("phone"), email: f.get("email"),
+        business: f.get("business"), consent: f.get("consent") === "on", website: f.get("website") });
+      setCallState("done");
+    } catch (x: any) { setCallErr(x.message); setCallState("idle"); }
+  }
 
   // Invite links look like /?level=2. They open the form with the matching path picked.
   useEffect(() => {
@@ -104,13 +123,14 @@ export default function Hivecast() {
         <div className="hive-top">
           <img className="hive3d" src="/hive3d.svg" alt="" aria-hidden="true" />
           <RoyalBees />
-          <span className="eyebrow">Hivecast · by QVTrellis</span>
+          <span className="eyebrow">Hivecast · by QVTrellis <button type="button" className="ai-pill" onClick={() => setNotice(true)}>✦ This service uses AI</button></span>
           <h2>Grow what you've built, without the guesswork</h2>
           <p>Pick what you're here for. We'll show you your own short video and next step.</p>
           <div className="row">
             <button className="btn honey" type="button" onClick={() => { setView("qual"); setErr(""); }}>Get started</button>
             <button className="btn" type="button" onClick={() => { setView("keep"); setErr(""); }}>Keep me posted</button>
           </div>
+          <a className="hero-link" href="/signup">Business owner? Sign up as a client →</a>
         </div>
         <div className="hive-body">
           {view === "keep" && (
@@ -154,7 +174,7 @@ export default function Hivecast() {
               <label>Your main goal right now<input id="hq-goal" name="goal" /></label>
               <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontWeight: 400 }}>
                 <input id="hq-consent" type="checkbox" name="consent" style={{ width: "auto", marginTop: 3 }} />
-                I agree that {CALLER.company} and the business I picked may contact me by email, and by text or AI-assisted phone call at the number I gave, about this request and related offers. Consent isn't required to buy. I can opt out any time: press 1 on any AI call, reply STOP to texts, or visit <a href="/optout">qvtrellis.net/optout</a>.
+                Yes, email me. If I gave a phone number: {CALL_CONSENT_TEXT}
               </label>
               <input className="hp" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" />
               <div className="row"><button className="btn honey" disabled={busy}>See my next step</button>{err && <span className="err">{err}</span>}</div>
@@ -195,18 +215,46 @@ export default function Hivecast() {
           </form>
           <div style={{ marginTop: 8 }}><MicButton label="Talk instead" onText={sendChat} /></div>
         </div>
-        <div className="panel">
-          <h3>Who we help</h3>
-          <div className="levels">
-            {PATHS.filter((p) => p.id !== "undecided").map((p, i) => (
-              <div key={p.id} className="level"><span className="lv">{i + 1}</span><div><b>{p.name}</b><div className="note">{p.hint}</div></div></div>
-            ))}
-          </div>
+        <div className="panel" id="call">
+          <h3>📞 Get a call from our AI assistant</h3>
+          <p className="note" style={{ margin: 0 }}>It tells you up front that it's an AI, explains the business you pick, answers your questions and can book you a time with a person. Press 1 at any time to stop the call.</p>
+          {callState === "done" ? (
+            <div className="out" style={{ marginTop: 10 }}>Thanks! We saved your request and your consent. Expect a call soon from {CALLER.company}{CALLER.phone ? ` (${CALLER.phone})` : ""}. Changed your mind? <a href="/optout">Opt out here</a>.</div>
+          ) : (
+            <form className="form" onSubmit={requestCall} style={{ marginTop: 10 }}>
+              <div className="two">
+                <label>Name<input name="name" autoComplete="name" /></label>
+                <label>Phone<input name="phone" type="tel" autoComplete="tel" required /></label>
+              </div>
+              <label>Which business is this about?<select name="business" defaultValue="Undecided">{BUSINESSES.map((b) => <option key={b}>{b}</option>)}</select></label>
+              <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontWeight: 400 }}>
+                <input type="checkbox" name="consent" required style={{ width: "auto", marginTop: 3 }} />
+                <span>{CALL_CONSENT_TEXT}</span>
+              </label>
+              <input className="hp" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" />
+              <div className="row"><button className="btn honey" disabled={callState === "busy"}>{callState === "busy" ? "Saving…" : "Call me"}</button>{callErr && <span className="err">{callErr}</span>}</div>
+            </form>
+          )}
         </div>
       </div>
       <p className="note" style={{ textAlign: "center" }}>
-        {CALLER.company}{CALLER.phone ? ` · ${CALLER.phone}` : ""} · <a href="/optout">Opt out of calls, texts and emails</a> · <a href="/login">Team sign in</a>
+        {CALLER.company}{CALLER.phone ? ` · ${CALLER.phone}` : ""} · <button type="button" className="linkish" onClick={() => setNotice(true)}>How we use AI</button> · <a href="/optout">Opt out of calls, texts and emails</a> · <a href="/signup">Client sign-up</a> · <a href="/login">Team sign in</a>
       </p>
+      {notice && (
+        <div className="modal-bg" role="dialog" aria-modal="true" aria-labelledby="ai-notice-title">
+          <div className="modal panel">
+            <span className="eyebrow">✦ This service uses AI</span>
+            <h3 id="ai-notice-title" style={{ margin: 0 }}>How we use AI</h3>
+            <ul className="note" style={{ margin: 0, paddingLeft: 18, display: "grid", gap: 4 }}>
+              <li>Our AI assistant answers questions and explains our services.</li>
+              <li>With your OK first, it can call you about the business you pick and help book a time with a person.</li>
+              <li>Every AI call starts by saying it's an AI. Press 1 at any time to stop it.</li>
+            </ul>
+            <p className="note" style={{ margin: 0 }}>Don't want AI phone calls? <a href="/optout" onClick={closeNotice}>Opt out here</a>.</p>
+            <div className="row"><button className="btn honey" type="button" onClick={closeNotice} autoFocus>Got it</button><a className="btn" href="/optout" onClick={closeNotice}>Opt out of calls</a></div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
