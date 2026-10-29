@@ -6,6 +6,8 @@ import type { TeamData } from "@/lib/useTeamData";
 import { Bars, copyText, Empty, Head, money, useToast, when } from "./ui";
 import { calItems, CalRow, stats } from "./sectionsA";
 import { MicButton } from "./voice";
+import { HiveRules } from "./hive";
+import { PricePlans } from "./prices";
 
 async function exportExcel(d: TeamData) {
   const ExcelJS = (await import("exceljs")).default;
@@ -333,6 +335,8 @@ export function Settings({ d }: { d: TeamData }) {
           <p className="note">Plug-ins switch on when their key is added to the server's environment settings.</p>
         </div>
       </div>
+      <PricePlans />
+      <HiveRules />
       <div className="panel">
         <h3>Example data</h3>
         <p className="note">Rows marked "Example" show how the app works. Remove them when real leads arrive.</p>

@@ -163,3 +163,39 @@ alter publication supabase_realtime add table leads, content, bookings, posts, b
 
 -- FIRST-TIME SETUP: add yourself as owner (change the email, then run this line)
 -- insert into team_members (email, role) values ('you@example.com', 'owner');
+
+-- Hive Challenge (added Oct 2026): monthly creator contest. Prize rules are editable by admins.
+create table if not exists challenge_rules (
+  id text primary key default 'rules', cash_pct numeric not null default 10, credit_pct numeric not null default 15,
+  high_stakes_min numeric not null default 3000, both_over_min boolean not null default true, finalists int not null default 5,
+  updated_at timestamptz not null default now());
+insert into challenge_rules (id) values ('rules') on conflict do nothing;
+create table if not exists challenges (
+  id uuid primary key default gen_random_uuid(), month text not null, client text not null, business text, brief text not null,
+  budget numeric not null default 0, status text not null default 'Open' check (status in ('Open','Judging','Winner picked','Closed')),
+  winner_entry uuid, created_by uuid references auth.users(id) default auth.uid(), created_at timestamptz not null default now());
+create table if not exists challenge_entries (
+  id uuid primary key default gen_random_uuid(), challenge_id uuid not null references challenges(id) on delete cascade,
+  creator_id uuid references auth.users(id) default auth.uid(), creator_email text default (auth.jwt() ->> 'email'),
+  title text not null, copy text not null, content_id uuid references content(id) on delete set null,
+  ai_score int, ai_notes text, safety_ok boolean,
+  status text not null default 'Submitted' check (status in ('Submitted','Needs fixes','Finalist','Winner','Not picked')),
+  payout_choice text check (payout_choice in ('cash','credits','both')), payout_cash numeric not null default 0,
+  payout_credits numeric not null default 0, created_at timestamptz not null default now());
+alter table challenge_rules enable row level security;
+alter table challenges enable row level security;
+alter table challenge_entries enable row level security;
+drop policy if exists challenge_rules_read on challenge_rules;
+create policy challenge_rules_read on challenge_rules for select using (is_team());
+drop policy if exists challenge_rules_write on challenge_rules;
+create policy challenge_rules_write on challenge_rules for update using (is_admin()) with check (is_admin());
+drop policy if exists challenges_team on challenges;
+create policy challenges_team on challenges for all using (is_team()) with check (is_team());
+drop policy if exists challenge_entries_read on challenge_entries;
+create policy challenge_entries_read on challenge_entries for select using (is_team());
+drop policy if exists challenge_entries_insert on challenge_entries;
+create policy challenge_entries_insert on challenge_entries for insert with check (is_team() and creator_id = (select auth.uid()));
+drop policy if exists challenge_entries_update on challenge_entries;
+create policy challenge_entries_update on challenge_entries for update using (creator_id = (select auth.uid()) or is_admin()) with check (creator_id = (select auth.uid()) or is_admin());
+drop policy if exists challenge_entries_delete on challenge_entries;
+create policy challenge_entries_delete on challenge_entries for delete using (creator_id = (select auth.uid()) or is_admin());

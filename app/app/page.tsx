@@ -6,9 +6,10 @@ import { ToastProvider } from "@/components/ui";
 import { Board, Chef, Create } from "@/components/sectionsA";
 import { Calendar, Community, FollowUp, Graphs, Leads, Settings } from "@/components/sectionsB";
 import { Share } from "@/components/share";
+import { HiveChallenge } from "@/components/hive";
 
 const TABS = [
-  ["board", "Money Board"], ["chef", "Marketing Chef"], ["create", "Create"], ["share", "Share"], ["graphs", "Graphs"], ["leads", "Leads & Data"],
+  ["board", "Money Board"], ["chef", "Marketing Chef"], ["create", "Create"], ["share", "Share"], ["hive", "Hive Challenge"], ["graphs", "Graphs"], ["leads", "Leads & Data"],
   ["followup", "Follow-up"], ["calendar", "Calendar"], ["community", "Community"], ["settings", "Settings"],
 ] as const;
 
@@ -82,6 +83,7 @@ export default function Dashboard() {
         {tab === "chef" && <Chef d={d} />}
         {tab === "create" && <Create d={d} />}
         {tab === "share" && <Share d={d} />}
+        {tab === "hive" && <HiveChallenge d={d} />}
         {tab === "graphs" && <Graphs d={d} />}
         {tab === "leads" && <Leads d={d} />}
         {tab === "followup" && <FollowUp d={d} />}
