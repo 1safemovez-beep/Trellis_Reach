@@ -20,6 +20,12 @@ export async function POST(req: Request) {
   const source = SOURCES.includes(b.source) ? b.source : "Direct";
   const business = BUSINESSES.includes(b.business) ? b.business : "Undecided";
   const notes: string[] = [];
+  // Which shared ad or video brought them in.
+  const fromAd = clean(b.fromAd, 64);
+  if (/^[0-9a-f-]{36}$/i.test(fromAd)) {
+    const { data: ad } = await supabaseAdmin().from("content").select("title").eq("id", fromAd).maybeSingle();
+    if (ad) notes.push(`Came from shared ad: ${ad.title} (${fromAd})`);
+  }
   // Proof of consent, saved before any call can happen.
   const consentNote = (where: string) => `Consent to AI calls/texts given ${now} via ${where}: "${CALL_CONSENT_TEXT}"`;
 

@@ -28,6 +28,7 @@ export default function Hivecast() {
   const path = PATHS.find((p) => p.id === pathId);
   const formRef = useRef<HTMLFormElement>(null);
   const [fillNote, setFillNote] = useState("");
+  const [fromAd, setFromAd] = useState(""); // shared ad the visitor came from (/?c=<id>)
   const [level, setLevel] = useState(0); // 1-7 when the visitor came from a community invite link
   const [video, setVideo] = useState<{ url: string | null; poster?: string | null } | null>(null);
   const [notice, setNotice] = useState(false); // AI notice pop-up, shown on the first visit
@@ -45,7 +46,7 @@ export default function Hivecast() {
     setCallState("busy"); setCallErr("");
     try {
       await post("/api/leads", { kind: "call-request", name: f.get("name"), phone: f.get("phone"), email: f.get("email"),
-        business: f.get("business"), consent: f.get("consent") === "on", website: f.get("website") });
+        business: f.get("business"), consent: f.get("consent") === "on", website: f.get("website"), fromAd });
       setCallState("done");
     } catch (x: any) { setCallErr(x.message); setCallState("idle"); }
   }
@@ -55,6 +56,8 @@ export default function Hivecast() {
     const n = Number(new URLSearchParams(window.location.search).get("level"));
     const lv = LEVELS[n - 1];
     if (lv) { setLevel(n); setPathId(LEVEL_PATHS[lv[0]] || ""); setView("qual"); }
+    const c = new URLSearchParams(window.location.search).get("c");
+    if (c) setFromAd(c);
   }, []);
 
   // The path's video, made in the dashboard with "Show on Hivecast for".
@@ -95,7 +98,7 @@ export default function Hivecast() {
     try {
       const r = await post("/api/leads", {
         kind: "qualify", pathId, business: f.get("business"), name: f.get("name"), email: f.get("email"),
-        phone: f.get("phone"), source: f.get("source"), goal: f.get("goal"), consent: f.get("consent") === "on", website: f.get("website"), level,
+        phone: f.get("phone"), source: f.get("source"), goal: f.get("goal"), consent: f.get("consent") === "on", website: f.get("website"), level, fromAd,
       });
       setLeadId(r.id || ""); setView("next");
     } catch (x: any) { setErr(x.message); } finally { setBusy(false); }

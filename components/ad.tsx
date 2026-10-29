@@ -25,10 +25,6 @@ export function AdPreview({ business, title, text, cta = "Learn more", videoUrl 
   );
 }
 
-// Pulls the readable ad copy out of a saved script.
-export function adCopy(body: string) {
-  const main = body.split(/\n\s*SHOT LIST/i)[0];
-  return main.replace(/^\s*(\[[^\]]*\]|\([^)]*\)|[A-Z][A-Z /&-]{2,}:)\s*/gm, "").replace(/\n{2,}/g, "\n").trim();
-}
+export { adCopy } from "@/lib/adcopy";
 
 export const isAdFormat = (type: string) => /ad|commercial|social post|video|outreach|invite/i.test(type || "");
