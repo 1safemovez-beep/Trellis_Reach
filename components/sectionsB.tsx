@@ -44,6 +44,12 @@ export function Leads({ d }: { d: TeamData }) {
     const { error } = await supabase().from("leads").update(p).eq("id", id);
     toast(error ? `Couldn't update: ${error.message}` : msg);
   }
+  async function removeLead(id: string, name: string) {
+    if (!window.confirm(`Delete ${name} forever?\n\nThis can't be undone.`)) return;
+    await supabase().from("bookings").update({ lead_id: null }).eq("lead_id", id);
+    const { error } = await supabase().from("leads").delete().eq("id", id);
+    toast(error ? `Couldn't delete: ${error.message}` : "Deleted for good");
+  }
   async function add(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
@@ -66,18 +72,19 @@ export function Leads({ d }: { d: TeamData }) {
           </div>
         </div>
         <div className="tablewrap cards"><table>
-          <thead><tr><th>Name</th><th>Business / path</th><th>Source</th><th>Stage</th><th>Value</th><th>Closer</th><th>Added</th></tr></thead>
+          <thead><tr><th>Name</th><th>Business / path</th><th>Source</th><th>Stage</th><th>Value</th><th>Closer</th><th>Added</th><th></th></tr></thead>
           <tbody>{rows.length ? rows.map((l) => (
             <tr key={l.id}>
-              <td data-label="Name"><b>{l.name}</b>{(l.notes || "").includes("OPTED OUT") && <> <span className="pill bad">Opted out</span></>}{l.example && <> <span className="pill muted">Example</span></>}<div className="note">{l.email}{l.phone ? ` · ${l.phone}` : ""}</div></td>
+              <td data-label="Name"><b>{l.name}</b>{(l.notes || "").includes("DELETE REQUESTED") && <> <span className="pill bad">Asked to be deleted</span></>}{(l.notes || "").includes("OPTED OUT") && <> <span className="pill bad">Opted out</span></>}{l.example && <> <span className="pill muted">Example</span></>}<div className="note">{l.email}{l.phone ? ` · ${l.phone}` : ""}</div></td>
               <td data-label="Business / path">{l.business}<div className="note">{l.path}</div></td>
               <td data-label="Source">{l.source}</td>
               <td data-label="Stage"><select aria-label="Stage" value={l.stage} onChange={(e) => patch(l.id, { stage: e.target.value }, e.target.value === "Won" ? "Won! Add the deal value" : "Stage updated")}>{STAGES.map((s) => <option key={s}>{s}</option>)}</select></td>
               <td className="num" data-label="Value"><input type="number" min={0} aria-label="Deal value" defaultValue={l.value || ""} onBlur={(e) => +e.target.value !== +l.value && patch(l.id, { value: +e.target.value || 0 }, "Value saved")} style={{ width: 90, padding: "4px 6px", fontSize: 13 }} /></td>
               <td data-label="Closer"><input aria-label="Closer" defaultValue={l.closer || ""} onBlur={(e) => e.target.value !== (l.closer || "") && patch(l.id, { closer: e.target.value }, "Closer saved")} style={{ width: 100, padding: "4px 6px", fontSize: 13 }} /></td>
               <td className="num" data-label="Added">{when(l.created_at)}</td>
+              <td><button className={"btn small " + ((l.notes || "").includes("DELETE REQUESTED") ? "danger" : "danger-outline")} type="button" onClick={() => removeLead(l.id, l.name)}>Delete</button></td>
             </tr>
-          )) : <tr><td colSpan={7}><Empty>No leads match.</Empty></td></tr>}</tbody>
+          )) : <tr><td colSpan={8}><Empty>No leads match.</Empty></td></tr>}</tbody>
         </table></div>
       </div>
       <details className="panel">
@@ -290,6 +297,13 @@ export function Settings({ d }: { d: TeamData }) {
     const { error } = await supabase().from("settings").update({ app_name: f.app_name, tagline: f.tagline, logo: f.logo.toUpperCase(), support_email: f.support_email || null, updated_at: new Date().toISOString() }).eq("id", "brand");
     toast(error ? `Couldn't save: ${error.message}` : "Brand saved");
   }
+  const [confirmText, setConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  async function deleteAccount() {
+    setDeleting(true);
+    try { await api("/api/account/delete", { confirm: confirmText }); await supabase().auth.signOut(); window.location.href = "/"; }
+    catch (x: any) { toast(x.message); setDeleting(false); }
+  }
   async function clearExamples() {
     let n = 0;
     for (const t of ["leads", "content", "bookings"]) {
@@ -323,6 +337,12 @@ export function Settings({ d }: { d: TeamData }) {
         <h3>Example data</h3>
         <p className="note">Rows marked "Example" show how the app works. Remove them when real leads arrive.</p>
         <button className="btn small" type="button" onClick={clearExamples}>Remove example rows</button>
+      </div>
+      <div className="panel form danger-zone">
+        <h3 style={{ margin: 0, color: "var(--bad)" }}>Delete my account</h3>
+        <p className="warn">⚠️ This permanently deletes your account, your sign-in and your community posts. <b>If you delete this, you can't get it back.</b></p>
+        <label>Type DELETE to confirm<input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder="DELETE" autoComplete="off" /></label>
+        <button className="btn danger" type="button" onClick={deleteAccount} disabled={confirmText !== "DELETE" || deleting} style={{ justifySelf: "start" }}>{deleting ? "Deleting…" : "Delete my account forever"}</button>
       </div>
     </section>
   );

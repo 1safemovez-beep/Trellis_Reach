@@ -241,7 +241,7 @@ export default function Hivecast() {
         </div>
       </div>
       <p className="note" style={{ textAlign: "center" }}>
-        {CALLER.company}{CALLER.phone ? ` · ${CALLER.phone}` : ""} · <button type="button" className="linkish" onClick={() => setNotice(true)}>How we use AI</button> · <a href="/optout">Opt out of calls, texts and emails</a> · <a href="/signup">Client sign-up</a> · <a href="/login">Team sign in</a>
+        {CALLER.company}{CALLER.phone ? ` · ${CALLER.phone}` : ""} · <button type="button" className="linkish" onClick={() => setNotice(true)}>How we use AI</button> · <a href="/optout">Opt out of calls, texts and emails</a> · <a href="/delete">Delete my information</a> · <a href="/signup">Client sign-up</a> · <a href="/login">Team sign in</a>
       </p>
       {notice && (
         <div className="modal-bg" role="dialog" aria-modal="true" aria-labelledby="ai-notice-title">

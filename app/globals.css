@@ -204,3 +204,11 @@ button.level[aria-expanded="true"]{background:var(--honey-soft)}
 .checks{display:grid;gap:6px}
 .checks label{display:flex;gap:8px;align-items:flex-start;font-weight:400;color:var(--ink)}
 .checks input{width:auto;margin-top:3px}
+/* Delete / danger */
+.btn.danger{background:#B3261E;border-color:#B3261E;color:#fff}
+.btn.danger:hover{background:#8C1D18}
+.btn.danger-outline{background:transparent;border-color:#B3261E;color:#B3261E}
+.danger-zone{border-color:#B3261E!important;border-width:1.5px}
+.warn{margin:0;padding:10px 12px;border-radius:10px;background:var(--bad-soft);color:var(--bad);font-size:14px}
+.checkline{display:flex!important;gap:8px;align-items:flex-start;font-weight:400;color:var(--ink)}
+.checkline input{width:auto;margin-top:3px}

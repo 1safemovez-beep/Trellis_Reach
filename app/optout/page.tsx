@@ -41,7 +41,7 @@ export default function OptOut() {
         )}
         <p className="note" style={{ margin: 0 }}>
           On any AI call from us you can also press 1 to opt out. On texts, reply STOP.
-          <br />{CALLER.company}{CALLER.phone ? ` · ${CALLER.phone}` : ""} · <a href="/">Back to Hivecast</a>
+          <br />{CALLER.company}{CALLER.phone ? ` · ${CALLER.phone}` : ""} · <a href="/delete">Delete my information</a> · <a href="/">Back to Hivecast</a>
         </p>
       </div>
     </main>
