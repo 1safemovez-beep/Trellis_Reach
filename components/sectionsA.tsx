@@ -4,6 +4,7 @@ import { MicButton, speak, speechSupported, stopSpeaking, useListen } from "./vo
 import { api, supabase } from "@/lib/supabaseClient";
 import { BUSINESSES, CONTENT_FORMATS, MAKE_KINDS, PROFILE_SLOTS, SOURCES } from "@/lib/constants";
 import { AdImage } from "./adimage";
+import { EMPTY_RELEASE, ReleaseBox, releaseReady, saveRelease, SignLink, type ReleaseInfo } from "./release";
 import type { TeamData } from "@/lib/useTeamData";
 import { Bars, copyText, Empty, Head, money, useToast, when } from "./ui";
 import { PlaySaved, VideoMaker } from "./video";
@@ -193,6 +194,8 @@ export function Create({ d }: { d: TeamData }) {
   const [okToUse, setOkToUse] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
+  const [release, setRelease] = useState<ReleaseInfo>(EMPTY_RELEASE);
+  const [signId, setSignId] = useState("");
   const resultRef = useRef<HTMLDivElement>(null);
   const K = MAKE_KINDS.find((k) => k.id === kind)!;
   const isImg = Boolean(file && file.type.startsWith("image/"));
@@ -218,7 +221,7 @@ export function Create({ d }: { d: TeamData }) {
       toast("Uploaded ✓");
     } catch (x: any) { setErr(x.message); } finally { setUploading(false); }
   }
-  function clearFile() { setFile(null); setPreview(""); setMediaUrl(null); }
+  function clearFile() { setFile(null); setPreview(""); setMediaUrl(null); setRelease(EMPTY_RELEASE); }
 
   async function go() {
     setErr(""); setBusy(true); setSavedId(null); setOut(null); setImageUrl("");
@@ -235,6 +238,7 @@ export function Create({ d }: { d: TeamData }) {
   // Saves once and remembers the row, so "Make video" and "Save" never create duplicates.
   async function saveRow(): Promise<string | null> {
     if (savedId) return savedId;
+    if (file && !releaseReady(release)) throw new Error("Finish the release under your upload: who's shown, and their name.");
     let media = mediaUrl;
     // Save the AI-designed ad image too, so it shows in the Library and can be shared.
     if (imageUrl) {
@@ -250,6 +254,7 @@ export function Create({ d }: { d: TeamData }) {
     }).select("id").single();
     if (error) throw new Error(`Couldn't save: ${error.message}`);
     setSavedId(data.id);
+    if (file) { try { const r = await saveRelease(release, { mediaUrl, contentId: data.id }); if (r?.status === "Pending") setSignId(r.id); } catch (x: any) { toast(x.message); } }
     return data.id;
   }
   async function save() {
@@ -275,11 +280,12 @@ export function Create({ d }: { d: TeamData }) {
           {preview ? (isVid ? <video src={preview} controls playsInline /> : <img src={preview} alt="Your upload" />) : <span className="drop-ph" aria-hidden="true">{kind === "creator" ? "🎞️" : "🖼️"}</span>}
           <div className="form" style={{ gap: 6 }}>
             <b>{mediaUrl ? "✅ Added" : uploading ? "Uploading…" : uploadLabel}<span className="note"> {kind === "creator" ? "" : "(optional)"}</span></b>
-            <label className="checkline"><input type="checkbox" checked={okToUse} onChange={(e) => setOkToUse(e.target.checked)} /><span>It's my own, and anyone shown agreed.</span></label>
+            <label className="checkline"><input type="checkbox" checked={okToUse} onChange={(e) => setOkToUse(e.target.checked)} /><span>I own this or have permission to use it.</span></label>
             <div className="row">
               <label className="btn honey small" style={{ cursor: "pointer" }}>{file ? "Change file" : "⬆ Upload"}<input type="file" accept={accept} hidden onChange={(e) => { pick(e.target.files?.[0] || null); e.target.value = ""; }} /></label>
               {file && <button className="btn small" type="button" onClick={clearFile}>Remove</button>}
             </div>
+            {file && <ReleaseBox value={release} onChange={setRelease} defaultBusiness={biz} />}
           </div>
         </div>
       )}
@@ -325,6 +331,7 @@ export function Create({ d }: { d: TeamData }) {
           )}
           {kind === "script" && !other && out.shots && <details><summary className="note" style={{ cursor: "pointer" }}>🎥 Filming guide</summary><div className="out" style={{ marginTop: 6 }}>{out.shots}</div></details>}
 
+          {signId && <SignLink id={signId} />}
           <div className="row">
             <button className="btn primary" type="button" onClick={save}>Save to Library</button>
             <button className="btn small" type="button" onClick={() => copyText(text, toast)}>Copy words</button>

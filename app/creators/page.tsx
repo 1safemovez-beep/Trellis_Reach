@@ -17,6 +17,21 @@ export default function Creators() {
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [sampleUrl, setSampleUrl] = useState("");
+  const [sampleBusy, setSampleBusy] = useState(false);
+  const [sampleOk, setSampleOk] = useState(false);
+  async function uploadSample(f: File | null) {
+    if (!f) return;
+    if (!sampleOk) { setErr("Tick the box first: it's your own work."); return; }
+    setSampleBusy(true); setErr("");
+    try {
+      const fd = new FormData(); fd.append("file", f); fd.append("ok", "yes");
+      const res = await fetch("/api/public-upload", { method: "POST", body: fd });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || "Upload failed.");
+      setSampleUrl(j.url);
+    } catch (x: any) { setErr(x.message); } finally { setSampleBusy(false); }
+  }
   const [examples, setExamples] = useState<any[]>([]);
   useEffect(() => { fetch("/api/examples").then((r) => r.json()).then((j) => setExamples(j.examples || [])).catch(() => {}); }, []);
 
@@ -36,7 +51,7 @@ export default function Creators() {
     try {
       const res = await fetch("/api/leads", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
         kind: "creator-signup", name: f.get("name"), email: f.get("email"), phone: f.get("phone"), links: f.get("links"), makes,
-        tester: f.get("tester") === "on", seedLoop: f.get("seedLoop") === "on", agree: f.get("agree") === "on",
+        tester: f.get("tester") === "on", sampleUrl, inSample: f.get("inSample") === "on", seedLoop: f.get("seedLoop") === "on", agree: f.get("agree") === "on",
         consent: f.get("consent") === "on", website: f.get("website"),
       }) });
       const j = await res.json().catch(() => ({}));
@@ -108,6 +123,14 @@ export default function Creators() {
               <label>Email<input name="email" type="email" required autoComplete="email" /></label>
               <label>Phone (optional)<input name="phone" type="tel" autoComplete="tel" /></label>
               <label>Your work or socials (optional)<input name="links" placeholder="Instagram, TikTok, portfolio…" /></label>
+            </div>
+            <div className="drop" style={{ gridTemplateColumns: "1fr" }}>
+              <b>Show us your work (optional)</b>
+              <label className="checkline"><input type="checkbox" checked={sampleOk} onChange={(e) => setSampleOk(e.target.checked)} /><span>This is my own work, and anyone shown agreed to be in it.</span></label>
+              <label className="btn honey small" style={{ cursor: "pointer", justifySelf: "start" }}>{sampleBusy ? "Uploading…" : sampleUrl ? "✅ Uploaded · change" : "⬆ Upload a sample"}
+                <input type="file" accept="image/*,video/*" hidden onChange={(e) => { uploadSample(e.target.files?.[0] || null); e.target.value = ""; }} />
+              </label>
+              {sampleUrl && <label className="checkline"><input type="checkbox" name="inSample" /><span>I'm shown in it, and QVTrellis may use it to promote the creator program.</span></label>}
             </div>
             <h3 style={{ margin: "4px 0 0" }}>What do you make?</h3>
             <div className="checks">{MAKES.map((m) => <label key={m}><input type="checkbox" checked={makes.includes(m)} onChange={() => setMakes((v) => (v.includes(m) ? v.filter((x) => x !== m) : [...v, m]))} />{m}</label>)}</div>

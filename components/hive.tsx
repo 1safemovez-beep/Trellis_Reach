@@ -5,6 +5,7 @@ import { BUSINESSES } from "@/lib/constants";
 import type { TeamData } from "@/lib/useTeamData";
 import { Empty, Head, money, useToast, when } from "./ui";
 import { MicButton } from "./voice";
+import { EMPTY_RELEASE, ReleaseBox, releaseReady, saveRelease, SignLink, type ReleaseInfo } from "./release";
 
 type Rules = { cash_pct: number; credit_pct: number; high_stakes_min: number; both_over_min: boolean; finalists: number };
 type Challenge = { id: string; month: string; client: string; business: string | null; brief: string; budget: number; status: string; winner_entry: string | null; created_at: string };
@@ -90,6 +91,10 @@ export function HiveChallenge({ d }: { d: TeamData }) {
   const [brief, setBrief] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
   const [copy, setCopy] = useState("");
+  const [entryFile, setEntryFile] = useState<File | null>(null);
+  const [entryRelease, setEntryRelease] = useState<ReleaseInfo>(EMPTY_RELEASE);
+  const [entryOk, setEntryOk] = useState(false);
+  const [signId, setSignId] = useState("");
   const name = (email: string | null) => (email || "creator").split("@")[0];
 
   async function createChallenge(e: FormEvent<HTMLFormElement>) {
@@ -101,12 +106,22 @@ export function HiveChallenge({ d }: { d: TeamData }) {
   async function submitEntry(e: FormEvent<HTMLFormElement>, c: Challenge) {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
+    let media: string | null = null;
+    if (entryFile) {
+      if (!entryOk) return toast("Tick: you own this or have permission.");
+      if (!releaseReady(entryRelease)) return toast("Finish the release: who's shown and their name.");
+      const path = `hive-${Date.now()}-${entryFile.name.replace(/[^\w.-]+/g, "_")}`;
+      const up = await supabase().storage.from("creator-uploads").upload(path, entryFile, { contentType: entryFile.type });
+      if (up.error) return toast(`Upload failed: ${up.error.message}`);
+      media = supabase().storage.from("creator-uploads").getPublicUrl(path).data.publicUrl;
+    }
     const { data, error } = await supabase().from("challenge_entries").insert({
-      challenge_id: c.id, title: f.title, copy, content_id: f.content_id || null, creator_id: me.id,
+      challenge_id: c.id, title: f.title, copy, content_id: f.content_id || null, creator_id: me.id, media_url: media,
       payout_choice: prizeFor(c.budget, rules).both ? "both" : f.choice || "cash",
     }).select("id").single();
     if (error) return toast(`Couldn't submit: ${error.message}`);
-    (e.target as HTMLFormElement).reset(); setCopy("");
+    if (media) { try { const r = await saveRelease(entryRelease, { mediaUrl: media, entryId: data.id }); if (r?.status === "Pending") setSignId(r.id); } catch {} }
+    (e.target as HTMLFormElement).reset(); setCopy(""); setEntryFile(null); setEntryRelease(EMPTY_RELEASE); setEntryOk(false);
     toast("Submitted. The AI judge is scoring it…");
     api("/api/agents/judge", { entryId: data.id }).then((r) => toast(r.safety_ok ? `Scored ${r.ai_score}/100` : "Needs fixes. See the judge's notes.")).catch((x) => toast(x.message));
   }
@@ -159,6 +174,7 @@ export function HiveChallenge({ d }: { d: TeamData }) {
           </form>
         </details>
       )}
+      {signId && <SignLink id={signId} />}
       {!challenges.length ? <Empty>No challenges yet.{me.admin ? " Open the first one above." : " Check back on the 1st."}</Empty> : challenges.map((c) => {
         const list = entries.filter((x) => x.challenge_id === c.id).sort((a, b) => (b.ai_score || 0) - (a.ai_score || 0));
         const mine = list.filter((x) => x.creator_id === me.id);
@@ -182,7 +198,12 @@ export function HiveChallenge({ d }: { d: TeamData }) {
                   <label>Title<input name="title" required /></label>
                   <label>Ad copy or video script<textarea value={copy} onChange={(e) => setCopy(e.target.value)} required style={{ minHeight: 120 }} /></label>
                   <MicButton label="Say your ad" onText={(t) => setCopy((v) => (v ? v + " " : "") + t)} />
-                  <label>Attach an ad or video from your library (optional)<select name="content_id"><option value="">None</option>{d.content.map((x) => <option key={x.id} value={x.id}>{x.title}{x.video_id ? " 🎬" : ""}</option>)}</select></label>
+                  <label>Upload your image or video (optional)<input type="file" accept="image/*,video/*" onChange={(e) => setEntryFile(e.target.files?.[0] || null)} /></label>
+                  {entryFile && (<>
+                    <label className="checkline"><input type="checkbox" checked={entryOk} onChange={(e) => setEntryOk(e.target.checked)} /><span>I own this or have permission to use it.</span></label>
+                    <ReleaseBox value={entryRelease} onChange={setEntryRelease} defaultBusiness={c.client} />
+                  </>)}
+                  <label>Or attach one from your library (optional)<select name="content_id"><option value="">None</option>{d.content.map((x) => <option key={x.id} value={x.id}>{x.title}{x.video_id ? " 🎬" : ""}</option>)}</select></label>
                   {!prize.both && <label>If I win, pay me in<select name="choice"><option value="cash">Cash ({rules.cash_pct}%)</option><option value="credits">Credits ({rules.credit_pct}%, worth more)</option></select></label>}
                   <p className="note" style={{ margin: 0 }}>By entering you confirm it's your own work, anyone shown agreed, and the client may use it if it wins. Entries that don't win stay yours.</p>
                   <div><button className="btn honey">Submit entry</button></div>
@@ -198,6 +219,7 @@ export function HiveChallenge({ d }: { d: TeamData }) {
                     </div>
                   </div>
                   <span className="who">by {name(x.creator_email)} · {when(x.created_at)}{x.status === "Winner" ? ` · won ${prizeFor(c.budget, rules, x.payout_choice).label}` : ""}</span>
+                  {(x as any).media_url && (/\.(mp4|mov|webm)(\?|$)/i.test((x as any).media_url) ? <video className="hive-video" src={(x as any).media_url} controls playsInline style={{ maxWidth: 420 }} /> : <img src={(x as any).media_url} alt="" style={{ maxWidth: 420, width: "100%", borderRadius: 12 }} />)}
                   <div className="out">{x.copy}</div>
                   {x.ai_notes && (me.admin || x.creator_id === me.id) && <p className="note" style={{ margin: 0 }}>🤖 Judge: {x.ai_notes}</p>}
                   <div className="row">

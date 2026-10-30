@@ -112,3 +112,7 @@ export const MAKE_KINDS = [
   { id: "script", icon: "📝", label: "Script for you", hint: "You film it, your style", format: "Self-film video script" },
   { id: "creator", icon: "🎨", label: "Creator-made", hint: "A creator or you make it and upload", format: "Creator brief" },
 ] as const;
+
+// Media release: anyone shown in an ad or video agrees to this before it's used.
+export const RELEASE_TERMS = (who: string, business: string, products: string) =>
+  `I, ${who || "[name]"}, give QVTrellis, ${business || "the business named"}, and the clients QVTrellis makes this ad or video for, permission to use my name, photo, image, likeness and voice, and images of ${products || "my business and products"}, in this ad or video and in future advertising and promotions, in any media (online, social, print, video), worldwide, without payment unless we agreed otherwise in writing. I confirm I'm 18 or older and have the right to give this permission for anything shown. I can ask to stop future use at any time by emailing ${CALLER.email}; content already published may stay up.`;

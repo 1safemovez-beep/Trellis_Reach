@@ -5,11 +5,28 @@ import type { TeamData } from "@/lib/useTeamData";
 import { Empty, Head, useToast, when } from "./ui";
 import { AdPreview, adCopy, isAdFormat } from "./ad";
 import { PlaySaved } from "./video";
+import { UploadBox } from "./uploadbox";
+import { saveRelease, SignLink } from "./release";
+import { BUSINESSES } from "@/lib/constants";
 
 // Library: every ad and video you've made, newest first, with videos ready to play.
 export function Library({ d, go }: { d: TeamData; go: (t: string) => void }) {
   const toast = useToast();
   const [show, setShow] = useState<"all" | "videos" | "ads" | "examples">("all");
+  const [adding, setAdding] = useState(false);
+  const [biz, setBiz] = useState(BUSINESSES[0]);
+  const [signId, setSignId] = useState("");
+  async function added(u: { url: string; isVideo: boolean; name: string; release: any }) {
+    const { data: me } = await supabase().auth.getUser();
+    const { data, error } = await supabase().from("content").insert({
+      title: u.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").slice(0, 80) || "Upload", body: "Uploaded file", type: u.isVideo ? "Uploaded video" : "Uploaded image",
+      business: biz, status: "Draft", media_url: u.url, created_by: me.user?.id, video_mode: "Upload",
+    }).select("id").single();
+    if (error) throw new Error(`Couldn't save: ${error.message}`);
+    const r = await saveRelease(u.release, { mediaUrl: u.url, contentId: data.id });
+    if (r?.status === "Pending") setSignId(r.id);
+    toast("Added to your Library 🐝"); setAdding(false);
+  }
   const items = d.content.filter((c) =>
     show === "videos" ? Boolean(c.video_id) : show === "ads" ? !c.video_id && isAdFormat(c.type) : show === "examples" ? (c as any).featured : true);
   async function feature(id: string, on: boolean) {
@@ -30,8 +47,18 @@ export function Library({ d, go }: { d: TeamData; go: (t: string) => void }) {
             {k === "all" ? "All" : k === "videos" ? "🎬 Videos" : k === "ads" ? "📣 Ads" : "⭐ Examples"}
           </button>
         ))}
-        <button type="button" className="btn small honey" onClick={() => go("create")} style={{ marginLeft: "auto" }}>+ Make new</button>
+        <div className="row" style={{ marginLeft: "auto" }}>
+          <button type="button" className="btn small" onClick={() => setAdding((v) => !v)}>⬆ Upload</button>
+          <button type="button" className="btn small honey" onClick={() => go("create")}>+ Make new</button>
+        </div>
       </div>
+      {adding && (
+        <div className="panel form">
+          <label>For<select value={biz} onChange={(e) => setBiz(e.target.value)}>{BUSINESSES.map((b) => <option key={b}>{b}</option>)}</select></label>
+          <UploadBox business={biz} onUploaded={added} label="Add a photo or video to your Library" />
+        </div>
+      )}
+      {signId && <SignLink id={signId} />}
       {!items.length ? <Empty>Nothing here yet. Tap “Make new” to create your first one.</Empty> : (
         <div className="lib">
           {items.map((c, i) => (
@@ -42,6 +69,7 @@ export function Library({ d, go }: { d: TeamData; go: (t: string) => void }) {
               <div className="lib-body">
                 <b>{i === 0 && show === "all" ? "🆕 " : ""}{c.title}</b>
                 <span className="note">{c.type} · {c.business} · {when(c.created_at)}</span>
+                {(c as any).release_status && <span className={"pill " + ((c as any).release_status === "Signed" ? "" : "bad")} style={{ justifySelf: "start" }}>{(c as any).release_status === "Signed" ? "✍️ Release signed" : "⏳ Waiting for signature"}</span>}
                 <details><summary className="note" style={{ cursor: "pointer" }}>Script</summary><div className="out" style={{ marginTop: 6 }}>{c.body}</div></details>
                 <div className="row">
                   <button className="btn small primary" type="button" onClick={() => go("share")}>Share</button>

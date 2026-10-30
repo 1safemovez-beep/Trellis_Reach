@@ -41,6 +41,8 @@ export async function POST(req: Request) {
     const makes = (Array.isArray(b.makes) ? b.makes : []).map((x: any) => clean(x, 40)).filter(Boolean).slice(0, 8);
     notes.push(`Creator sign-up${makes.length ? `: makes ${makes.join(", ")}` : ""}`, `Agreed to creator terms ${now}`);
     if (clean(b.links, 300)) notes.push(`Work/socials: ${clean(b.links, 300)}`);
+    if (/^https:\/\/[\w.-]+\.supabase\.co\/storage\//.test(clean(b.sampleUrl, 500))) notes.push(`Sample work: ${clean(b.sampleUrl, 500)}`);
+    if (b.inSample) notes.push(`Agreed ${now}: shown in their sample and QVTrellis may use it to promote the creator program`);
     if (b.tester) notes.push("Wants to be a TESTER");
     if (b.seedLoop) notes.push("Seed Loop founding member waitlist");
     if (consent && phone) notes.push(consentNote("creator sign-up"));
