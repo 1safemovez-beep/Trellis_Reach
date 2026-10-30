@@ -62,7 +62,11 @@ export function VideoMaker({ words, ensureSaved, auto = 0, photoFile = null }: {
       if (s.status === "completed") { setUrl(s.url); setState("done"); return; }
       if (s.status === "failed") { setErr(s.error || "HeyGen couldn't make this video."); setState("failed"); return; }
       timer.current = setTimeout(() => poll(videoId), 8000);
-    } catch (x: any) { setErr(x.message); setState("failed"); }
+    } catch (x: any) {
+      // A dropped phone signal isn't a failed video: keep checking quietly.
+      if (/fetch|network|load failed/i.test(x.message || "")) { timer.current = setTimeout(() => poll(videoId), 15000); return; }
+      setErr(x.message); setState("failed");
+    }
   }
 
   async function make() {
@@ -149,7 +153,11 @@ export function PlaySaved({ videoId, status }: { videoId: string; status?: strin
         if (s.status === "failed") { setMsg(s.error || "This video failed."); return; }
         setMsg("🎬 Video is being made… it shows here when ready.");
         timer.current = setTimeout(load, 15000);
-      } catch (x: any) { if (alive) setMsg(x.message); }
+      } catch (x: any) {
+        if (!alive) return;
+        if (/fetch|network|load failed/i.test(x.message || "")) { setMsg("🎬 Video is being made… it shows here when ready."); timer.current = setTimeout(load, 20000); }
+        else setMsg(x.message);
+      }
     }
     if (status === "failed") setMsg("This video failed. Make it again from Create.");
     else load();
