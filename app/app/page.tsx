@@ -7,9 +7,10 @@ import { Board, Chief, Create } from "@/components/sectionsA";
 import { Calendar, Community, FollowUp, Graphs, Leads, Settings } from "@/components/sectionsB";
 import { Share } from "@/components/share";
 import { HiveChallenge } from "@/components/hive";
+import { Library } from "@/components/library";
 
 const TABS = [
-  ["board", "Money Board"], ["chef", "Marketing Chief"], ["create", "Create"], ["share", "Share"], ["hive", "Hive Challenge"], ["graphs", "Graphs"], ["leads", "Leads & Data"],
+  ["board", "Money Board"], ["chef", "Marketing Chief"], ["create", "Create"], ["library", "Library"], ["share", "Share"], ["hive", "Hive Challenge"], ["graphs", "Graphs"], ["leads", "Leads & Data"],
   ["followup", "Follow-up"], ["calendar", "Calendar"], ["community", "Community"], ["settings", "Settings"],
 ] as const;
 
@@ -36,6 +37,11 @@ export default function Dashboard() {
     return () => sub.subscription.unsubscribe();
   }, []);
   useEffect(() => { if (status === "out") window.location.href = "/login"; }, [status]);
+  useEffect(() => {
+    const h = (e: Event) => go((e as CustomEvent).detail);
+    window.addEventListener("tr-go", h);
+    return () => window.removeEventListener("tr-go", h);
+  }); // eslint-disable-line react-hooks/exhaustive-deps
 
   function go(t: string) {
     setTab(t);
@@ -82,6 +88,7 @@ export default function Dashboard() {
         {tab === "board" && <Board d={d} go={go} />}
         {tab === "chef" && <Chief d={d} />}
         {tab === "create" && <Create d={d} />}
+        {tab === "library" && <Library d={d} go={go} />}
         {tab === "share" && <Share d={d} />}
         {tab === "hive" && <HiveChallenge d={d} />}
         {tab === "graphs" && <Graphs d={d} />}

@@ -232,21 +232,21 @@ export function Create({ d }: { d: TeamData }) {
           <label>Business<select id="cr-biz" value={biz} onChange={(e) => setBiz(e.target.value)}>{names.map((n) => <option key={n}>{n}</option>)}</select></label>
           <label>What to make<select id="cr-fmt" value={format} onChange={(e) => setFormat(e.target.value)}>{CONTENT_FORMATS.map((f) => <option key={f}>{f}</option>)}</select></label>
           <div>
-            <div className="eyebrow" style={{ marginBottom: 6 }}>How do you want to make it?</div>
+            <div className="eyebrow" style={{ marginBottom: 6 }}>How?</div>
             <div className="modes">
-              <button type="button" className="mode" aria-pressed={how === "together"} onClick={() => setHow("together")}><b>🤝 Work with the AI</b><small>You add your vision, photo and words. The AI builds it with you and you approve every line.</small></button>
-              <button type="button" className="mode" aria-pressed={how === "ai"} onClick={() => setHow("ai")}><b>⚡ All AI</b><small>One tap. The AI writes it and, for videos and commercials, makes the video too.</small></button>
+              <button type="button" className="mode" aria-pressed={how === "together"} onClick={() => setHow("together")}><b>🤝 With me</b><small>I add my ideas</small></button>
+              <button type="button" className="mode" aria-pressed={how === "ai"} onClick={() => setHow("ai")}><b>⚡ All AI</b><small>AI does everything</small></button>
             </div>
           </div>
           {how === "together" && (<>
           <div>
-            <div className="eyebrow" style={{ marginBottom: 6 }}>Video mode (plug-in slots)</div>
+            <div className="eyebrow" style={{ marginBottom: 6 }}>Video</div>
             <div className="modes">{VIDEO_MODES.map((m) => <button key={m.id} type="button" className="mode" aria-pressed={mode === m.id} onClick={() => setMode(m.id)}><b>{m.label}</b><small>{m.hint}</small></button>)}</div>
           </div>
           {mode === "photo" && (<>
             <label>Photo<input id="cr-photo" type="file" accept="image/*" /></label>
             <label style={{ display: "flex", gap: 8, fontWeight: 400 }}><input id="cr-consent" type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ width: "auto" }} /> This is me, or I have written permission from the person in the photo.</label>
-            <p className="note" style={{ margin: 0 }}>The photo is sent to the AI video plug-in once it's connected.</p>
+
           </>)}
           {mode === "describe" && (<>
             <label>Describe the video<textarea id="cr-desc" value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="A confident founder in a bright studio, upbeat, 30 seconds" /></label>
@@ -271,22 +271,9 @@ export function Create({ d }: { d: TeamData }) {
           {out && isVideo && <VideoMaker words={out.voiceover || out.script} ensureSaved={saveRow} auto={autoRun} />}
         </div>
       </div>
-      <div className="panel">
-        <h3>Content library</h3>
-        {d.content.length ? (
-          <div className="tablewrap"><table>
-            <thead><tr><th>Title</th><th>Type</th><th>Business</th><th>Status</th><th>Goes out</th></tr></thead>
-            <tbody>{d.content.map((c) => (
-              <tr key={c.id}>
-                <td><b>{c.title}</b>{c.example && <> <span className="pill muted">Example</span></>}{isAdFormat(c.type) && <details><summary className="note" style={{ cursor: "pointer" }}>Show ad</summary><AdPreview business={c.business || "Trellis Reach"} title={c.title} text={adCopy(c.body)} /></details>}<details><summary className="note" style={{ cursor: "pointer" }}>Show script</summary><div className="out" style={{ marginTop: 6 }}>{c.body}</div></details></td>
-                <td>{c.type}{c.video_mode && c.video_mode !== "No video" && <div className="note">{c.video_mode}</div>}{c.video_id && <PlaySaved videoId={c.video_id} status={c.video_status} />}</td>
-                <td>{c.business}</td>
-                <td><span className={"pill " + (c.status === "Scheduled" ? "honey" : "muted")}>{c.status}</span></td>
-                <td className="num">{when(c.scheduled_for)}</td>
-              </tr>
-            ))}</tbody>
-          </table></div>
-        ) : <Empty>Nothing saved yet. Create your first ad above.</Empty>}
+      <div className="panel row" style={{ justifyContent: "space-between" }}>
+        <span className="note" style={{ margin: 0 }}>Everything you save goes to your Library.</span>
+        <button className="btn small primary" type="button" onClick={() => { try { localStorage.setItem("tr-tab", "library"); } catch {} window.dispatchEvent(new CustomEvent("tr-go", { detail: "library" })); }}>Open Library →</button>
       </div>
     </section>
   );

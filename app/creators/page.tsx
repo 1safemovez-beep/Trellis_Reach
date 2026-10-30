@@ -1,5 +1,6 @@
 "use client";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { AdPreview } from "@/components/ad";
 import { CALL_CONSENT_TEXT, CALLER } from "@/lib/constants";
 import { RoyalBees } from "@/components/bees";
 import { MicButton } from "@/components/voice";
@@ -16,6 +17,8 @@ export default function Creators() {
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [examples, setExamples] = useState<any[]>([]);
+  useEffect(() => { fetch("/api/examples").then((r) => r.json()).then((j) => setExamples(j.examples || [])).catch(() => {}); }, []);
 
   async function tryIt(e: FormEvent) {
     e.preventDefault(); setTrying(true); setTryErr(""); setSample(null);
@@ -81,6 +84,18 @@ export default function Creators() {
           </div>
         </div>
       </div>
+
+      {examples.length > 0 && (
+        <div className="panel" style={{ display: "grid", gap: 10 }}>
+          <h3 style={{ margin: 0 }}>⭐ Made with Trellis Reach</h3>
+          <div className="lib">{examples.map((x) => (
+            <div key={x.id} className="lib-card">
+              {x.video ? <><video className="hive-video" src={x.video} controls playsInline /><div className="lib-body"><b>{x.title}</b><span className="ai-tag">Made with AI</span></div></>
+                : <AdPreview business={x.business || "Trellis Reach"} title={x.title} text={x.text} />}
+            </div>
+          ))}</div>
+        </div>
+      )}
 
       <div className="panel" id="join" style={{ maxWidth: 640, width: "100%", margin: "0 auto", display: "grid", gap: 12 }}>
         <h2 style={{ margin: 0 }}>Join as a creator</h2>

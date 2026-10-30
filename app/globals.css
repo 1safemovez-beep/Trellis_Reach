@@ -217,3 +217,16 @@ button.level[aria-expanded="true"]{background:var(--honey-soft)}
 .pw input{padding-right:44px}
 .pw-eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--muted);padding:8px;cursor:pointer;display:grid;place-items:center;border-radius:8px}
 .pw-eye:hover{color:var(--ink)}
+
+/* Bigger, simpler choice buttons */
+.modes{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.mode{padding:16px 14px;min-height:76px;align-content:center;gap:4px;border-radius:14px}
+.mode b{font-size:16px}
+.mode small{font-size:13px}
+/* Library */
+.lib{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.lib-card{border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden;display:grid}
+.lib-card .lib-body{padding:12px;display:grid;gap:6px}
+.lib-card .hive-video{border-radius:0}
+.lib-card .ad{box-shadow:none;border:0;border-bottom:1px solid var(--line);border-radius:0;margin:0;max-width:none}
+.lib-new{border:2px solid var(--honey)}

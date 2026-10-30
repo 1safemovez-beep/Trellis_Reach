@@ -114,7 +114,7 @@ export function PlaySaved({ videoId, status }: { videoId: string; status?: strin
     return () => { alive = false; clearTimeout(timer.current); };
   }, [videoId, status]);
   if (url) return (<>
-    <video className="hive-video" src={url} controls playsInline style={{ marginTop: 6, maxWidth: 360 }} />
+    <video className="hive-video" src={url} controls playsInline />
     <span className="ai-tag">Made with AI</span>
   </>);
   return msg ? <p className="note" style={{ margin: "4px 0 0" }}>{msg}</p> : null;

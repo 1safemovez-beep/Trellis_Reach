@@ -25,10 +25,10 @@ export type Stage = (typeof STAGES)[number];
 
 // Video modes are plug-in slots: add one here without touching the others.
 export const VIDEO_MODES = [
-  { id: "none", label: "No video", hint: "Text script only" },
-  { id: "photo", label: "Your photo", hint: "Your face or one you have consent for" },
-  { id: "describe", label: "Describe it", hint: "You describe, AI builds it" },
-  { id: "pro", label: "One-click pro", hint: "Fully scripted commercial" },
+  { id: "none", label: "📝 Words only", hint: "No video" },
+  { id: "photo", label: "🤳 My photo", hint: "Upload a photo" },
+  { id: "describe", label: "🗣️ Describe it", hint: "Say what you want" },
+  { id: "pro", label: "⚡ One tap", hint: "AI does it all" },
 ];
 
 export const CONTENT_FORMATS = [
