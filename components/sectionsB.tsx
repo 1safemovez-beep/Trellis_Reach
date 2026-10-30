@@ -78,7 +78,7 @@ export function Leads({ d }: { d: TeamData }) {
           <thead><tr><th>Name</th><th>Business / path</th><th>Source</th><th>Stage</th><th>Value</th><th>Closer</th><th>Added</th><th></th></tr></thead>
           <tbody>{rows.length ? rows.map((l) => (
             <tr key={l.id}>
-              <td data-label="Name"><b>{l.name}</b>{(l.notes || "").includes("DELETE REQUESTED") && <> <span className="pill bad">Asked to be deleted</span></>}{(l.notes || "").includes("OPTED OUT") && <> <span className="pill bad">Opted out</span></>}{l.example && <> <span className="pill muted">Example</span></>}<div className="note">{l.email}{l.phone ? ` · ${l.phone}` : ""}</div></td>
+              <td data-label="Name"><b>{l.name}</b>{(l.notes || "").includes("TESTER") && <> <span className="pill">Tester</span></>}{(l.notes || "").includes("Seed Loop founding") && <> <span className="pill honey">Seed Loop waitlist</span></>}{(l.notes || "").includes("DELETE REQUESTED") && <> <span className="pill bad">Asked to be deleted</span></>}{(l.notes || "").includes("OPTED OUT") && <> <span className="pill bad">Opted out</span></>}{l.example && <> <span className="pill muted">Example</span></>}<div className="note">{l.email}{l.phone ? ` · ${l.phone}` : ""}</div></td>
               <td data-label="Business / path">{l.business}<div className="note">{l.path}</div></td>
               <td data-label="Source">{l.source}</td>
               <td data-label="Stage"><select aria-label="Stage" value={l.stage} onChange={(e) => patch(l.id, { stage: e.target.value }, e.target.value === "Won" ? "Won! Add the deal value" : "Stage updated")}>{STAGES.map((s) => <option key={s}>{s}</option>)}</select></td>

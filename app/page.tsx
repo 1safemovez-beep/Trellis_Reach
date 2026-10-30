@@ -133,7 +133,10 @@ export default function Hivecast() {
             <button className="btn honey" type="button" onClick={() => { setView("qual"); setErr(""); }}>Get started</button>
             <button className="btn" type="button" onClick={() => { setView("keep"); setErr(""); }}>Keep me posted</button>
           </div>
-          <a className="hero-link" href="/signup">Business owner? Sign up as a client →</a>
+          <div className="row" style={{ gap: 16 }}>
+            <a className="hero-link" href="/signup">Business owner? Sign up as a client →</a>
+            <a className="hero-link" href="/creators">Creator? Try it and join →</a>
+          </div>
         </div>
         <div className="hive-body">
           {view === "keep" && (
@@ -241,7 +244,7 @@ export default function Hivecast() {
         </div>
       </div>
       <p className="note" style={{ textAlign: "center" }}>
-        {CALLER.company}{CALLER.phone ? ` · ${CALLER.phone}` : ""} · <a href={`mailto:${CALLER.email}`}>{CALLER.email}</a> · <button type="button" className="linkish" onClick={() => setNotice(true)}>How we use AI</button> · <a href="/optout">Opt out of calls, texts and emails</a> · <a href="/delete">Delete my information</a> · <a href="/signup">Client sign-up</a> · <a href="/login">Team sign in</a>
+        {CALLER.company}{CALLER.phone ? ` · ${CALLER.phone}` : ""} · <a href={`mailto:${CALLER.email}`}>{CALLER.email}</a> · <button type="button" className="linkish" onClick={() => setNotice(true)}>How we use AI</button> · <a href="/optout">Opt out of calls, texts and emails</a> · <a href="/delete">Delete my information</a> · <a href="/signup">Client sign-up</a> · <a href="/creators">Creator sign-up</a> · <a href="/login">Team sign in</a>
       </p>
       {notice && (
         <div className="modal-bg" role="dialog" aria-modal="true" aria-labelledby="ai-notice-title">

@@ -10,7 +10,7 @@ export async function POST(req: Request) {
   if (!b) return fail("Something went wrong with the form. Please try again.");
   if (clean(b.website)) return NextResponse.json({ ok: true }); // honeypot: bots fill hidden fields
 
-  const kind = ["keep-posted", "qualify", "call-request", "client-signup"].includes(b.kind) ? b.kind : "qualify";
+  const kind = ["keep-posted", "qualify", "call-request", "client-signup", "creator-signup"].includes(b.kind) ? b.kind : "qualify";
   const now = new Date().toISOString();
   const email = clean(b.email, 200).toLowerCase();
   const phone = clean(b.phone, 40);
@@ -36,6 +36,16 @@ export async function POST(req: Request) {
     notes.push("Call requested from Hivecast", consentNote("Hivecast call box"));
     row = { name: clean(b.name, 120) || "Call request", email: email || null, phone, business, path: "Requested an AI call", source,
       stage: "New", consent_email: Boolean(email), consent_sms_calls: true };
+  } else if (kind === "creator-signup") {
+    if (!b.agree) return fail("Please agree to the creator terms.");
+    const makes = (Array.isArray(b.makes) ? b.makes : []).map((x: any) => clean(x, 40)).filter(Boolean).slice(0, 8);
+    notes.push(`Creator sign-up${makes.length ? `: makes ${makes.join(", ")}` : ""}`, `Agreed to creator terms ${now}`);
+    if (clean(b.links, 300)) notes.push(`Work/socials: ${clean(b.links, 300)}`);
+    if (b.tester) notes.push("Wants to be a TESTER");
+    if (b.seedLoop) notes.push("Seed Loop founding member waitlist");
+    if (consent && phone) notes.push(consentNote("creator sign-up"));
+    row = { name: clean(b.name, 120) || email.split("@")[0], email, phone: phone || null, business: "Trellis Reach", path: "Creator",
+      source: "Creator", stage: "New", consent_email: true, consent_sms_calls: consent && Boolean(phone) };
   } else if (kind === "client-signup") {
     const company = clean(b.company, 160);
     if (!company) return fail("Enter your business name.");
