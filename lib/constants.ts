@@ -33,6 +33,7 @@ export const VIDEO_MODES = [
 
 export const CONTENT_FORMATS = [
   "30-second ad / commercial", "Funnel video (VSL)", "Social post", "Nurture email", "SMS follow-up", "Booking-call opener",
+  "Designed image ad", "Self-film video script", "Creator brief",
   "Client outreach message (attract clients)", "App user invite (attract users)", "Sales call script (close the deal)",
   "Objection answers", "Proposal / offer close email",
 ];
@@ -103,3 +104,11 @@ export const CLIENT_CONSENT_PROMISE =
 // Permission to test a client's systems and bots. Required before any readiness check.
 export const READINESS_AUTH_TEXT =
   "I own these systems and bots or am authorized to approve testing them. I give QVTrellis permission to review and test them for the readiness check (security setup, exposed keys, and whether bots and AI do what they should). Nothing is tested until we agree in writing on exactly what's included and when. I can pause or cancel testing at any time.";
+
+// The 4 ways to make an ad on the Create page.
+export const MAKE_KINDS = [
+  { id: "ai-ad", icon: "⚡", label: "AI Ad", hint: "Designed picture + words, all by AI", format: "Designed image ad" },
+  { id: "ai-video", icon: "🎬", label: "AI Video", hint: "Premium commercial, made by AI", format: "30-second ad / commercial" },
+  { id: "script", icon: "📝", label: "Script for you", hint: "You film it, your style", format: "Self-film video script" },
+  { id: "creator", icon: "🎨", label: "Creator-made", hint: "A creator or you make it and upload", format: "Creator brief" },
+] as const;

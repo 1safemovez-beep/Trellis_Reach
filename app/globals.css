@@ -230,3 +230,15 @@ button.level[aria-expanded="true"]{background:var(--honey-soft)}
 .lib-card .hive-video{border-radius:0}
 .lib-card .ad{box-shadow:none;border:0;border-bottom:1px solid var(--line);border-radius:0;margin:0;max-width:none}
 .lib-new{border:2px solid var(--honey)}
+
+/* Create: 4 big choices + one "tell the AI" box */
+.kinds{display:grid;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(min-width:860px){.kinds{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.kind{border:1.5px solid var(--line);border-radius:18px;padding:20px 16px;min-height:150px;background:var(--panel);cursor:pointer;display:grid;gap:6px;align-content:center;text-align:left;font:inherit;color:inherit}
+.kind[aria-pressed="true"]{border-color:var(--honey);background:var(--honey-soft);box-shadow:0 0 0 3px color-mix(in srgb,var(--honey) 25%,transparent)}
+.kind-icon{font-size:34px;line-height:1}
+.kind b{font:600 19px/1.2 var(--display)}
+.kind small{color:var(--muted);font-size:14px}
+.tell{display:grid;gap:10px}
+.tell .mic{font-size:16px;padding:8px 18px 8px 8px}
+.tell .mic-dot{width:40px;height:40px;font-size:19px}

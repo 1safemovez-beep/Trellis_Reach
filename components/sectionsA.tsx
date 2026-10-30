@@ -2,11 +2,11 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { MicButton, speak, speechSupported, stopSpeaking, useListen } from "./voice";
 import { api, supabase } from "@/lib/supabaseClient";
-import { BUSINESSES, CONTENT_FORMATS, PROFILE_SLOTS, SOURCES, VIDEO_MODES } from "@/lib/constants";
+import { BUSINESSES, CONTENT_FORMATS, MAKE_KINDS, PROFILE_SLOTS, SOURCES } from "@/lib/constants";
+import { AdImage } from "./adimage";
 import type { TeamData } from "@/lib/useTeamData";
 import { Bars, copyText, Empty, Head, money, useToast, when } from "./ui";
 import { PlaySaved, VideoMaker } from "./video";
-import { AdPreview, adCopy, isAdFormat } from "./ad";
 
 export function calItems(d: TeamData) {
   return [
@@ -177,107 +177,132 @@ export function Chief({ d }: { d: TeamData }) {
 
 export function Create({ d }: { d: TeamData }) {
   const toast = useToast();
-  const names = Array.from(new Set([...d.businesses.map((b) => b.business_name), ...BUSINESSES]));
+  const names = Array.from(new Set([...BUSINESSES.filter((b) => b !== "Undecided"), ...d.businesses.map((b) => b.business_name)]));
   const [biz, setBiz] = useState(names[0]);
-  const [format, setFormat] = useState(CONTENT_FORMATS[0]);
-  const [mode, setMode] = useState("none");
-  const [consent, setConsent] = useState(false);
-  const [desc, setDesc] = useState("");
-  const [vision, setVision] = useState("");
+  const [kind, setKind] = useState<(typeof MAKE_KINDS)[number]["id"]>("ai-ad");
+  const [tell, setTell] = useState("");
+  const [other, setOther] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [out, setOut] = useState<any>(null);
-  const [whenAt, setWhenAt] = useState("");
   const [savedId, setSavedId] = useState<string | null>(null);
-  // Two ways to make an ad or commercial: the client works with the AI, or the AI does it all.
-  const [how, setHow] = useState<"together" | "ai">("together");
   const [autoRun, setAutoRun] = useState(0);
-  const videoRef = useRef<HTMLDivElement>(null);
-  // As soon as the script is ready, jump to the video step so it can't be missed.
-  useEffect(() => { if (out && videoRef.current) videoRef.current.scrollIntoView({ behavior: "smooth", block: "start" }); }, [out]);
-  const isVideo = /video|commercial|outreach|invite/i.test(format) || mode !== "none";
+  const [file, setFile] = useState<File | null>(null);
+  const [okToUse, setOkToUse] = useState(false);
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState("");
+  const resultRef = useRef<HTMLDivElement>(null);
+  const K = MAKE_KINDS.find((k) => k.id === kind)!;
+  useEffect(() => { if (out && resultRef.current) resultRef.current.scrollIntoView({ behavior: "smooth", block: "start" }); }, [out]);
+
+  // Talking picks the business too, if you name one of them.
+  function heard(t: string) {
+    setTell((v) => (v ? v + " " : "") + t);
+    const hit = names.find((n) => t.toLowerCase().includes(n.toLowerCase()));
+    if (hit) setBiz(hit);
+  }
 
   async function go() {
-    setErr(""); setBusy(true); setSavedId(null);
+    setErr(""); setBusy(true); setSavedId(null); setOut(null); setMediaUrl(null); setImageUrl("");
     try {
       const profile = d.businesses.find((b) => b.business_name === biz) || { business_name: biz };
-      const allAI = how === "ai";
-      setOut(await api("/api/agents/create", allAI
-        ? { format, mode: "pro", profile }
-        : { format, mode, photoConsent: consent, description: desc, vision, profile }));
-      setAutoRun(allAI && /video|commercial/i.test(format) ? Date.now() : 0);
+      const format = other || K.format;
+      const r = await api("/api/agents/create", { format, mode: kind === "ai-video" ? "pro" : "none", vision: tell, profile });
+      setOut(r);
+      setAutoRun(kind === "ai-video" && !other ? Date.now() : 0);
     } catch (x: any) { setErr(x.message); } finally { setBusy(false); }
   }
-  const text = out ? `${out.title}\n\n${out.script}${out.shots ? `\n\nSHOT LIST\n${out.shots}` : ""}\n\nKey points covered: ${(out.keyPointsCovered || []).join(" · ")}` : "";
+  const text = out ? `${out.title}\n\n${out.script}${out.shots ? `\n\n${kind === "script" ? "FILMING GUIDE" : "SHOT LIST"}\n${out.shots}` : ""}` : "";
+
+  async function upload(): Promise<string | null> {
+    if (!file) return null;
+    if (!okToUse) throw new Error("Tick the box to confirm you can use this file.");
+    const path = `${Date.now()}-${file.name.replace(/[^\w.-]+/g, "_")}`;
+    const { error } = await supabase().storage.from("creator-uploads").upload(path, file, { contentType: file.type });
+    if (error) throw new Error(`Upload failed: ${error.message}`);
+    const url = supabase().storage.from("creator-uploads").getPublicUrl(path).data.publicUrl;
+    setMediaUrl(url);
+    return url;
+  }
 
   // Saves once and remembers the row, so "Make video" and "Save" never create duplicates.
   async function saveRow(): Promise<string | null> {
     if (savedId) return savedId;
+    let media = mediaUrl || (await upload());
+    // Save the AI-designed ad image too, so it shows in the Library and can be shared.
+    if (!media && imageUrl) {
+      const blob = await (await fetch(imageUrl)).blob();
+      const path = `ai-ad-${Date.now()}.png`;
+      const { error: upErr } = await supabase().storage.from("creator-uploads").upload(path, blob, { contentType: "image/png" });
+      if (!upErr) media = supabase().storage.from("creator-uploads").getPublicUrl(path).data.publicUrl;
+    }
     const { data: u } = await supabase().auth.getUser();
     const { data, error } = await supabase().from("content").insert({
       title: out.title, body: out.script + (out.shots ? `\n\nSHOT LIST\n${out.shots}` : ""), type: out.format, business: biz,
-      video_mode: out.mode, status: whenAt ? "Scheduled" : "Draft", scheduled_for: whenAt ? new Date(whenAt).toISOString() : null, created_by: u.user?.id,
+      video_mode: K.label, status: "Draft", created_by: u.user?.id, media_url: media,
     }).select("id").single();
     if (error) throw new Error(`Couldn't save: ${error.message}`);
     setSavedId(data.id);
     return data.id;
   }
   async function save() {
-    if (savedId) return toast("Already in your library");
-    try { await saveRow(); toast(whenAt ? "Saved and scheduled" : "Saved to library"); } catch (x: any) { toast(x.message); }
+    if (savedId) return toast("Already in your Library");
+    try { await saveRow(); toast("Saved to your Library"); } catch (x: any) { toast(x.message); }
   }
 
   return (
     <section className="view">
-      <Head eyebrow="Agent 2 · Creator AI" title="Make ads, videos and scripts" lead="Every script keeps the locked key points: hook, problem, answer, proof and a call to action into Hivecast. The AI never invents results." />
-      <div className="grid2">
-        <div className="panel form">
-          <label>Business<select id="cr-biz" value={biz} onChange={(e) => setBiz(e.target.value)}>{names.map((n) => <option key={n}>{n}</option>)}</select></label>
-          <label>What to make<select id="cr-fmt" value={format} onChange={(e) => setFormat(e.target.value)}>{CONTENT_FORMATS.map((f) => <option key={f}>{f}</option>)}</select></label>
-          <div>
-            <div className="eyebrow" style={{ marginBottom: 6 }}>How?</div>
-            <div className="modes">
-              <button type="button" className="mode" aria-pressed={how === "together"} onClick={() => setHow("together")}><b>🤝 With me</b><small>I add my ideas</small></button>
-              <button type="button" className="mode" aria-pressed={how === "ai"} onClick={() => setHow("ai")}><b>⚡ All AI</b><small>AI does everything</small></button>
-            </div>
+      <Head eyebrow="Create" title="What do you want to make?" />
+      <div className="kinds">
+        {MAKE_KINDS.map((k) => (
+          <button key={k.id} type="button" className="kind" aria-pressed={kind === k.id && !other} onClick={() => { setKind(k.id); setOther(""); }}>
+            <span className="kind-icon" aria-hidden="true">{k.icon}</span><b>{k.label}</b><small>{k.hint}</small>
+          </button>
+        ))}
+      </div>
+      <div className="panel form">
+        <label>For<select id="cr-biz" value={biz} onChange={(e) => setBiz(e.target.value)}>{names.map((n) => <option key={n}>{n}</option>)}</select></label>
+        <div className="tell">
+          <MicButton label="Tell the AI what you want" onText={heard} />
+          <textarea value={tell} onChange={(e) => setTell(e.target.value)} placeholder="Or type it. Example: an ad for busy roofers, confident and premium, push the free estimate" />
+        </div>
+        {kind === "creator" && !other && (
+          <div className="form" style={{ gap: 8 }}>
+            <label>Upload your video or image (optional now, you can add it later)<input type="file" accept="image/*,video/*" onChange={(e) => setFile(e.target.files?.[0] || null)} /></label>
+            {file && <label className="checkline"><input type="checkbox" checked={okToUse} onChange={(e) => setOkToUse(e.target.checked)} /><span>This is my own work, and anyone shown agreed to be in it.</span></label>}
           </div>
-          {how === "together" && (<>
-          <div>
-            <div className="eyebrow" style={{ marginBottom: 6 }}>Video</div>
-            <div className="modes">{VIDEO_MODES.map((m) => <button key={m.id} type="button" className="mode" aria-pressed={mode === m.id} onClick={() => setMode(m.id)}><b>{m.label}</b><small>{m.hint}</small></button>)}</div>
-          </div>
-          {mode === "photo" && (<>
-            <label>Photo<input id="cr-photo" type="file" accept="image/*" /></label>
-            <label style={{ display: "flex", gap: 8, fontWeight: 400 }}><input id="cr-consent" type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ width: "auto" }} /> This is me, or I have written permission from the person in the photo.</label>
+        )}
+        <div className="row">
+          <button className="btn honey" type="button" onClick={go} disabled={busy} style={{ fontSize: 17, padding: "14px 24px" }}>{busy ? "Working on it…" : other ? "✨ Write it" : `${K.icon} Make my ${K.label}`}</button>
+          {err && <span className="err">{err}</span>}
+        </div>
+        <details>
+          <summary className="note" style={{ cursor: "pointer" }}>More writing: emails, texts, sales scripts…</summary>
+          <select value={other} onChange={(e) => setOther(e.target.value)} style={{ marginTop: 8 }}>
+            <option value="">Choose one</option>
+            {CONTENT_FORMATS.filter((f) => !MAKE_KINDS.some((k) => k.format === f)).map((f) => <option key={f}>{f}</option>)}
+          </select>
+        </details>
+      </div>
 
-          </>)}
-          {mode === "describe" && (<>
-            <label>Describe the video<textarea id="cr-desc" value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="A confident founder in a bright studio, upbeat, 30 seconds" /></label>
-            <MicButton label="Describe it out loud" onText={(t) => setDesc((v) => (v ? v + " " : "") + t)} />
-          </>)}
-          <label>Your vision (optional)<textarea id="cr-vision" value={vision} onChange={(e) => setVision(e.target.value)} placeholder="Wardrobe, setting, mood, anything you want in it" /></label>
-          <MicButton label="Say your vision" onText={(t) => setVision((v) => (v ? v + " " : "") + t)} />
-          </>)}
-          <div className="row"><button className="btn primary" type="button" onClick={go} disabled={busy}>{busy ? "Writing…" : how === "ai" ? "⚡ Make it all with AI" : "Create it"}</button>{err && <span className="err">{err}</span>}</div>
+      {out && (
+        <div className="panel form" ref={resultRef}>
+          <h3 style={{ margin: 0 }}>{out.title}</h3>
+          {out.graphic && <AdImage g={out.graphic} business={biz} onReady={setImageUrl} />}
+          {kind === "ai-video" && !other && <VideoMaker words={out.voiceover || out.script} ensureSaved={saveRow} auto={autoRun} />}
+          {mediaUrl && (/\.(mp4|mov|webm)$/i.test(mediaUrl) ? <video className="hive-video" src={mediaUrl} controls playsInline /> : <img src={mediaUrl} alt="" style={{ width: "100%", borderRadius: 12 }} />)}
+          <details open={kind !== "ai-video"}>
+            <summary className="note" style={{ cursor: "pointer" }}>{kind === "script" ? "Your script and filming guide" : kind === "creator" ? "Creator brief" : kind === "ai-ad" ? "Post caption" : "Script"}</summary>
+            <div className="out" style={{ marginTop: 6 }}>{text}</div>
+          </details>
+          <div className="row">
+            <button className="btn primary" type="button" onClick={save}>Save to Library</button>
+            <button className="btn small" type="button" onClick={() => copyText(text, toast)}>Copy words</button>
+            <button className="btn small" type="button" onClick={go} disabled={busy}>↻ Try another</button>
+          </div>
+          {imageUrl && <p className="note" style={{ margin: 0 }}>Tip: download the image and post it with the caption, or use Share after saving.</p>}
         </div>
-        <div className="panel">
-          <h3>Result</h3>
-          {out && isVideo && <div ref={videoRef}><VideoMaker words={out.voiceover || out.script} ensureSaved={saveRow} auto={autoRun} /></div>}
-          {out && isAdFormat(out.format) && <AdPreview business={biz} title={out.title} text={out.voiceover || adCopy(out.script)} />}
-          {out ? <div className="out">{text}</div> : <Empty>Your script appears here.</Empty>}
-          {out && (
-            <div className="row" style={{ marginTop: 10 }}>
-              <button className="btn primary small" type="button" onClick={save}>Save to library</button>
-              <button className="btn small" type="button" onClick={() => copyText(text, toast)}>Copy</button>
-              <label style={{ display: "flex", gap: 6, alignItems: "center" }}>Schedule<input id="cr-when" type="datetime-local" value={whenAt} onChange={(e) => setWhenAt(e.target.value)} style={{ width: "auto" }} /></label>
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="panel row" style={{ justifyContent: "space-between" }}>
-        <span className="note" style={{ margin: 0 }}>Everything you save goes to your Library.</span>
-        <button className="btn small primary" type="button" onClick={() => { try { localStorage.setItem("tr-tab", "library"); } catch {} window.dispatchEvent(new CustomEvent("tr-go", { detail: "library" })); }}>Open Library →</button>
-      </div>
+      )}
     </section>
   );
 }

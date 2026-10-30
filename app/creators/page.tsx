@@ -91,7 +91,7 @@ export default function Creators() {
           <div className="lib">{examples.map((x) => (
             <div key={x.id} className="lib-card">
               {x.video ? <><video className="hive-video" src={x.video} controls playsInline /><div className="lib-body"><b>{x.title}</b><span className="ai-tag">Made with AI</span></div></>
-                : <AdPreview business={x.business || "Trellis Reach"} title={x.title} text={x.text} />}
+                : x.image ? <img src={x.image} alt={x.title} style={{ width: "100%", display: "block" }} /> : <AdPreview business={x.business || "Trellis Reach"} title={x.title} text={x.text} />}
             </div>
           ))}</div>
         </div>

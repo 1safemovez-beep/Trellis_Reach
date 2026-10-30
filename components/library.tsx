@@ -36,7 +36,8 @@ export function Library({ d, go }: { d: TeamData; go: (t: string) => void }) {
         <div className="lib">
           {items.map((c, i) => (
             <div key={c.id} className={"lib-card" + (i === 0 && show === "all" ? " lib-new" : "")}>
-              {c.video_id ? <PlaySaved videoId={c.video_id} status={c.video_status} /> : isAdFormat(c.type) ? <AdPreview business={c.business || "Trellis Reach"} title={c.title} text={adCopy(c.body)} /> : null}
+              {c.media_url ? (/\.(mp4|mov|webm)(\?|$)/i.test(c.media_url) ? <video className="hive-video" src={c.media_url} controls playsInline /> : <img src={c.media_url} alt={c.title} style={{ width: "100%", display: "block" }} />)
+                : c.video_id ? <PlaySaved videoId={c.video_id} status={c.video_status} /> : isAdFormat(c.type) ? <AdPreview business={c.business || "Trellis Reach"} title={c.title} text={adCopy(c.body)} /> : null}
               <div className="lib-body">
                 <b>{i === 0 && show === "all" ? "🆕 " : ""}{c.title}</b>
                 <span className="note">{c.type} · {c.business} · {when(c.created_at)}</span>
