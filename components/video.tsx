@@ -57,9 +57,20 @@ export function VideoMaker({ words, ensureSaved, auto = 0 }: { words: string; en
   const busy = state === "starting" || state === "making" || state === "loading";
   return (
     <div className="panel form" style={{ marginTop: 12 }}>
-      <h3 style={{ margin: 0 }}>🎬 Make the video (HeyGen)</h3>
-      <label>Words the avatar says, exactly as written ({text.length}/1500)
-        <textarea value={text} maxLength={1500} onChange={(e) => setText(e.target.value)} style={{ minHeight: 140 }} />
+      <h3 style={{ margin: 0 }}>🎬 Step 2: make the video</h3>
+      {err && /isn't set up|key is wrong|401/i.test(err) && (
+        <div className="warn">Video isn't connected yet. In Vercel → Settings → Environment Variables, add <b>HEYGEN_API_KEY</b> with your HeyGen API key, then Redeploy.</div>
+      )}
+      <div className="row">
+        <button className="btn honey" type="button" onClick={make} disabled={busy || !opts || !text.trim()} style={{ fontSize: 17, padding: "14px 22px" }}>
+          {state === "loading" ? "Getting ready…" : state === "starting" ? "Starting…" : state === "making" ? "🎬 Making your video…" : "🎬 Make the video"}
+        </button>
+      </div>
+      <details>
+        <summary className="note" style={{ cursor: "pointer" }}>Change the words, avatar or voice</summary>
+        <div className="form" style={{ marginTop: 8 }}>
+      <label>Words the avatar says ({text.length}/1500)
+        <textarea value={text} maxLength={1500} onChange={(e) => setText(e.target.value)} style={{ minHeight: 120 }} />
       </label>
       <div className="two">
         <label>Avatar<select value={avatarId} onChange={(e) => setAvatarId(e.target.value)} disabled={!opts}>
@@ -75,13 +86,10 @@ export function VideoMaker({ words, ensureSaved, auto = 0 }: { words: string; en
           <option value="">Don't show on Hivecast</option>{PATHS.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select></label>
       </div>
-      <div className="row">
-        <button className="btn honey" type="button" onClick={make} disabled={busy || !opts || !text.trim()}>
-          {state === "starting" ? "Starting…" : state === "making" ? "Making video… (a few minutes)" : "Make video"}
-        </button>
-        {err && <span className="err">{err}</span>}
-      </div>
-      {state === "making" && <p className="note" style={{ margin: 0 }}>HeyGen is recording it. You can keep working; it's saved to your library and will finish there.</p>}
+        </div>
+      </details>
+      {err && <span className="err">{err}</span>}
+      {state === "making" && <p className="note" style={{ margin: 0 }}>Takes a few minutes. You can keep working: it lands in your Library and plays there when ready.</p>}
       {url && (<>
         <p className="note" style={{ margin: 0 }}>✅ Your video is ready and saved to the library.</p>
         <video className="hive-video" src={url} controls playsInline autoPlay />

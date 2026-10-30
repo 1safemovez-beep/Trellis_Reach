@@ -11,6 +11,7 @@ export async function GET() {
     supabaseAnonKey: has("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
     supabaseServiceKey: has("SUPABASE_SERVICE_ROLE_KEY"),
     anthropicKey: has("ANTHROPIC_API_KEY"),
+    heygenVideoKey: has("HEYGEN_API_KEY") || has("VIDEO_API_KEY"),
     databaseReachable: false,
     schemaInstalled: false,
     teamHasOwner: false,
@@ -26,6 +27,6 @@ export async function GET() {
       checks.databaseReachable = false;
     }
   }
-  const ok = Object.values(checks).every((v) => v === true);
+  const ok = Object.entries(checks).filter(([k]) => k !== "heygenVideoKey").every(([, v]) => v === true);
   return NextResponse.json({ ok, checks }, { headers: { "Cache-Control": "no-store" } });
 }

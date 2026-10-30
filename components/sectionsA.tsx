@@ -1,5 +1,5 @@
 "use client";
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { MicButton, speak, speechSupported, stopSpeaking, useListen } from "./voice";
 import { api, supabase } from "@/lib/supabaseClient";
 import { BUSINESSES, CONTENT_FORMATS, PROFILE_SLOTS, SOURCES, VIDEO_MODES } from "@/lib/constants";
@@ -192,6 +192,9 @@ export function Create({ d }: { d: TeamData }) {
   // Two ways to make an ad or commercial: the client works with the AI, or the AI does it all.
   const [how, setHow] = useState<"together" | "ai">("together");
   const [autoRun, setAutoRun] = useState(0);
+  const videoRef = useRef<HTMLDivElement>(null);
+  // As soon as the script is ready, jump to the video step so it can't be missed.
+  useEffect(() => { if (out && videoRef.current) videoRef.current.scrollIntoView({ behavior: "smooth", block: "start" }); }, [out]);
   const isVideo = /video|commercial|outreach|invite/i.test(format) || mode !== "none";
 
   async function go() {
@@ -259,6 +262,7 @@ export function Create({ d }: { d: TeamData }) {
         </div>
         <div className="panel">
           <h3>Result</h3>
+          {out && isVideo && <div ref={videoRef}><VideoMaker words={out.voiceover || out.script} ensureSaved={saveRow} auto={autoRun} /></div>}
           {out && isAdFormat(out.format) && <AdPreview business={biz} title={out.title} text={out.voiceover || adCopy(out.script)} />}
           {out ? <div className="out">{text}</div> : <Empty>Your script appears here.</Empty>}
           {out && (
@@ -268,7 +272,6 @@ export function Create({ d }: { d: TeamData }) {
               <label style={{ display: "flex", gap: 6, alignItems: "center" }}>Schedule<input id="cr-when" type="datetime-local" value={whenAt} onChange={(e) => setWhenAt(e.target.value)} style={{ width: "auto" }} /></label>
             </div>
           )}
-          {out && isVideo && <VideoMaker words={out.voiceover || out.script} ensureSaved={saveRow} auto={autoRun} />}
         </div>
       </div>
       <div className="panel row" style={{ justifyContent: "space-between" }}>
