@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
-import { CALLER, RELEASE_TERMS } from "@/lib/constants";
+import { CALLER, MINOR_RELEASE_TERMS, RELEASE_TERMS } from "@/lib/constants";
 import { clean, fail, rateLimited, requireTeam, supabaseAdmin } from "@/lib/server";
 
 // GET ?id= : public, shows a pending release to the person who needs to sign it.
 export async function GET(req: Request) {
   const id = new URL(req.url).searchParams.get("id") || "";
   if (!/^[0-9a-f-]{36}$/i.test(id)) return fail("Release not found.", 404);
-  const { data } = await supabaseAdmin().from("media_releases").select("id, person_name, business, products, status, media_url, signed_at").eq("id", id).maybeSingle();
+  const { data } = await supabaseAdmin().from("media_releases").select("id, person_name, business, products, status, media_url, signed_at, is_minor, guardian_name").eq("id", id).maybeSingle();
   if (!data) return fail("Release not found.", 404);
-  return NextResponse.json({ ...data, terms: RELEASE_TERMS(data.person_name, data.business || "", data.products || ""), company: CALLER.company });
+  return NextResponse.json({ ...data, terms: data.is_minor ? MINOR_RELEASE_TERMS(data.person_name, data.guardian_name || "", data.business || "", data.products || "") : RELEASE_TERMS(data.person_name, data.business || "", data.products || ""), company: CALLER.company });
 }
 
 // POST: team creates a release (self-signed now, or pending for someone else),
@@ -24,9 +24,10 @@ export async function POST(req: Request) {
     const signature = clean(b.signature, 120);
     if (!b.agree) return fail("Please tick the box to agree.");
     if (signature.length < 3) return fail("Type your full name to sign.");
-    const { data } = await db.from("media_releases").select("person_name, status, content_id").eq("id", id).maybeSingle();
+    const { data } = await db.from("media_releases").select("person_name, status, content_id, is_minor").eq("id", id).maybeSingle();
     if (!data) return fail("Release not found.", 404);
     if (data.status === "Signed") return NextResponse.json({ ok: true });
+    if (data.is_minor && !b.isGuardian) return fail("Please confirm you're the child's parent or legal guardian.");
     await db.from("media_releases").update({ status: "Signed", signature, signed_at: new Date().toISOString() }).eq("id", id);
     if (data.content_id) await refreshContent(data.content_id);
     return NextResponse.json({ ok: true });
@@ -37,10 +38,13 @@ export async function POST(req: Request) {
   const person = clean(b.personName, 120);
   if (!person) return fail("Enter the name of the person shown.");
   const isSelf = Boolean(b.isSelf);
+  const isMinor = Boolean(b.isMinor);
+  if (isMinor && (!clean(b.guardianName, 120) || !["Parent", "Legal guardian"].includes(b.relationship))) return fail("Enter the parent or guardian's name and relationship.");
   if (isSelf && (!b.agree || clean(b.signature, 120).length < 3)) return fail("Tick agree and type your full name to sign.");
   const row = {
     media_url: clean(b.mediaUrl, 500) || null, person_name: person, person_email: clean(b.personEmail, 200).toLowerCase() || null,
     business: clean(b.business, 160) || null, products: clean(b.products, 300) || null, is_self: isSelf,
+    is_minor: isMinor, guardian_name: isMinor ? clean(b.guardianName, 120) : null, guardian_relationship: isMinor ? b.relationship : null,
     status: isSelf ? "Signed" : "Pending", signature: isSelf ? clean(b.signature, 120) : null, signed_at: isSelf ? new Date().toISOString() : null,
     content_id: /^[0-9a-f-]{36}$/i.test(b.contentId || "") ? b.contentId : null, entry_id: /^[0-9a-f-]{36}$/i.test(b.entryId || "") ? b.entryId : null,
   };

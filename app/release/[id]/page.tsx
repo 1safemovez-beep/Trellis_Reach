@@ -15,7 +15,7 @@ export default function SignRelease({ params }: { params: { id: string } }) {
     const f = new FormData(e.currentTarget);
     setBusy(true); setErr("");
     try {
-      const res = await fetch("/api/release", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "sign", id: params.id, signature: f.get("signature"), agree: f.get("agree") === "on" }) });
+      const res = await fetch("/api/release", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "sign", id: params.id, signature: f.get("signature"), agree: f.get("agree") === "on", isGuardian: f.get("guardian") === "on" }) });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j.error || "Couldn't sign.");
       setDone(true);
@@ -25,7 +25,7 @@ export default function SignRelease({ params }: { params: { id: string } }) {
     <main className="wrap" style={{ paddingBlock: "32px 60px" }}>
       <div className="panel" style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 12 }}>
         <span className="eyebrow">{r?.company || "QVTrellis"} · media release</span>
-        <h2>Permission to use your image</h2>
+        <h2>{r?.is_minor ? "Permission to use your child's image" : "Permission to use your image"}</h2>
         {!r && !err && <p className="note">Loading…</p>}
         {err && !r && <p className="err">{err}</p>}
         {r && (done || r.status === "Signed") ? (
@@ -34,8 +34,9 @@ export default function SignRelease({ params }: { params: { id: string } }) {
           <form className="form" onSubmit={sign}>
             {r.media_url && (/\.(mp4|mov|webm)(\?|$)/i.test(r.media_url) ? <video className="hive-video" src={r.media_url} controls playsInline /> : <img src={r.media_url} alt="" style={{ width: "100%", borderRadius: 12 }} />)}
             <div className="out">{r.terms}</div>
+            {r.is_minor && <label className="checkline"><input type="checkbox" name="guardian" required /><span>I'm this child's parent or legal guardian, and I'm 18 or older.</span></label>}
             <label className="checkline"><input type="checkbox" name="agree" required /><span>I've read this and I agree.</span></label>
-            <label>Type your full name to sign<input name="signature" required autoComplete="name" /></label>
+            <label>{r.is_minor ? "Parent/guardian: type your full name to sign" : "Type your full name to sign"}<input name="signature" required autoComplete="name" /></label>
             <div className="row"><button className="btn honey" disabled={busy}>{busy ? "Signing…" : "Sign"}</button>{err && <span className="err">{err}</span>}</div>
             <p className="note" style={{ margin: 0 }}>Not you, or don't agree? Just close this page and nothing will be used.</p>
           </form>
