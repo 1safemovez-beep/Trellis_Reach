@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { heygen } from "@/lib/heygen";
+import { heygen, logError } from "@/lib/heygen";
 import { PATHS } from "@/lib/constants";
 import { clean, fail, requireTeam, supabaseAdmin } from "@/lib/server";
 
@@ -35,6 +35,8 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ videoId });
   } catch (e: any) {
+    await logError("video create", e.message);
+    if (/^[0-9a-f-]{36}$/i.test(contentId)) await supabaseAdmin().from("content").update({ video_status: "failed" }).eq("id", contentId);
     return fail(e.message, 503);
   }
 }

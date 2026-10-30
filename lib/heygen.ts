@@ -18,6 +18,7 @@ export async function heygen(path: string, init: { method?: string; body?: unkno
   if (!res.ok || (json.error && json.error !== null && typeof json.error === "object" && json.error.message)) {
     const msg = json?.error?.message || json?.message || json?.msg || "";
     console.error("HeyGen error", res.status, String(msg).slice(0, 300));
+    await logError(`heygen ${path.split("?")[0]}`, `${res.status} ${typeof json === "object" ? JSON.stringify(json).slice(0, 700) : ""}`);
     if (res.status === 401) throw new Error("HeyGen says the key is wrong (401). Check HEYGEN_API_KEY in Vercel, then redeploy.");
     if (res.status === 402 || /credit|quota|insufficient/i.test(msg)) throw new Error("HeyGen is out of credits for API videos. Add API credits in your HeyGen account.");
     if (res.status === 429) throw new Error("HeyGen is busy. Try again in a minute.");
@@ -39,4 +40,12 @@ export async function videoStatus(videoId: string): Promise<VideoStatus> {
     error: d.error ? d.error.detail || d.error.message || "Video failed" : null,
     duration: d.duration ?? null,
   };
+}
+
+// Records why a video step failed (never the key), so the owner and Claude can see it.
+export async function logError(area: string, message: string) {
+  try {
+    const { supabaseAdmin } = await import("./server");
+    await supabaseAdmin().from("app_errors").insert({ area, message: String(message).slice(0, 1000) });
+  } catch {}
 }

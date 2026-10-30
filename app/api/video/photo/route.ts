@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { heygenKey } from "@/lib/heygen";
+import { heygenKey, logError } from "@/lib/heygen";
 import { fail, requireTeam } from "@/lib/server";
 
 export const maxDuration = 60;
@@ -22,11 +22,13 @@ export async function POST(req: Request) {
     const id = j?.data?.talking_photo_id;
     if (!res.ok || !id) {
       const msg = j?.message || j?.error?.message || "";
+      await logError("video photo", `${res.status} ${JSON.stringify(j).slice(0, 700)}`);
       if (res.status === 401) return fail("HeyGen says the key is wrong (401). Check HEYGEN_API_KEY in Vercel, then redeploy.", 503);
       return fail(`HeyGen couldn't use that photo${msg ? `: ${msg}` : ""}. Use a clear photo with one face, looking at the camera.`, 503);
     }
     return NextResponse.json({ photoId: id });
   } catch (e: any) {
+    await logError("video photo", e.message);
     return fail(e.message || "Couldn't upload the photo.", 503);
   }
 }

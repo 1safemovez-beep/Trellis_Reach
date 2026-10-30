@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { heygen } from "@/lib/heygen";
+import { heygen, logError } from "@/lib/heygen";
 import { fail, requireTeam } from "@/lib/server";
 
 // Lists the HeyGen avatars and voices this account can use.
@@ -17,6 +17,7 @@ export async function POST(req: Request) {
     if (!avatars.length || !voices.length) return fail("HeyGen connected, but no presenters or voices came back. Check your HeyGen plan includes API access.", 503);
     return NextResponse.json({ avatars: avatars.slice(0, 400), voices: voices.slice(0, 400) });
   } catch (e: any) {
+    await logError("video options", e.message);
     return fail(e.message, 503);
   }
 }
