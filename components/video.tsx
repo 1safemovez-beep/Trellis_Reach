@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { api } from "@/lib/supabaseClient";
+import { api, supabase } from "@/lib/supabaseClient";
 import { PATHS } from "@/lib/constants";
 
 type Opt = { id: string; name: string; language?: string; gender?: string; mine?: boolean };
@@ -14,6 +14,24 @@ export function VideoMaker({ words, ensureSaved, auto = 0 }: { words: string; en
   const [voiceId, setVoiceId] = useState("");
   const [aspect, setAspect] = useState("16:9");
   const [hivecastPath, setHivecastPath] = useState("");
+  const [photoId, setPhotoId] = useState("");
+  const [photoPreview, setPhotoPreview] = useState("");
+  const [photoOk, setPhotoOk] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
+
+  async function usePhoto(f: File | null) {
+    if (!f) return;
+    if (!photoOk) { setErr("Tick the box first: it's you, or you have their written permission."); return; }
+    setErr(""); setPhotoBusy(true); setPhotoPreview(URL.createObjectURL(f));
+    try {
+      const { data } = await supabase().auth.getSession();
+      const fd = new FormData(); fd.append("photo", f); fd.append("consent", "yes");
+      const res = await fetch("/api/video/photo", { method: "POST", headers: { Authorization: `Bearer ${data.session?.access_token || ""}` }, body: fd });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || "Couldn't use that photo.");
+      setPhotoId(j.photoId);
+    } catch (x: any) { setErr(x.message); setPhotoPreview(""); } finally { setPhotoBusy(false); }
+  }
   const [state, setState] = useState<"idle" | "loading" | "starting" | "making" | "done" | "failed">("idle");
   const [err, setErr] = useState("");
   const [url, setUrl] = useState<string | null>(null);
@@ -48,7 +66,7 @@ export function VideoMaker({ words, ensureSaved, auto = 0 }: { words: string; en
     setErr(""); setUrl(null); setState("starting");
     try {
       const contentId = await ensureSaved();
-      const r = await api("/api/video/create", { text, avatarId, voiceId, aspect, contentId, hivecastPath });
+      const r = await api("/api/video/create", { text, avatarId, photoId, voiceId, aspect, contentId, hivecastPath });
       setState("making");
       timer.current = setTimeout(() => poll(r.videoId), 8000);
     } catch (x: any) { setErr(x.message); setState("failed"); }
@@ -66,14 +84,27 @@ export function VideoMaker({ words, ensureSaved, auto = 0 }: { words: string; en
           {state === "loading" ? "Getting ready…" : state === "starting" ? "Starting…" : state === "making" ? "🎬 Making your video…" : "🎬 Make the video"}
         </button>
       </div>
+      <div className="photo-pick">
+        {photoPreview ? <img src={photoPreview} alt="Your photo" /> : <span className="photo-ph" aria-hidden="true">🤳</span>}
+        <div className="form" style={{ gap: 6 }}>
+          <b>{photoId ? "✅ Your face will be in the video" : "Put your own face in the video (optional)"}</b>
+          <label className="checkline"><input type="checkbox" checked={photoOk} onChange={(e) => setPhotoOk(e.target.checked)} /><span>This is me, or I have their written permission.</span></label>
+          <label className="btn small" style={{ justifySelf: "start", cursor: "pointer" }}>
+            {photoBusy ? "Uploading…" : photoId ? "Change photo" : "📷 Add a photo"}
+            <input type="file" accept="image/jpeg,image/png" hidden onChange={(e) => usePhoto(e.target.files?.[0] || null)} />
+          </label>
+          {photoId && <button className="btn small" type="button" onClick={() => { setPhotoId(""); setPhotoPreview(""); }} style={{ justifySelf: "start" }}>Use an AI presenter instead</button>}
+          <span className="note">Clear, front-facing photo, one face, JPG or PNG.</span>
+        </div>
+      </div>
       <details>
-        <summary className="note" style={{ cursor: "pointer" }}>Change the words, avatar or voice</summary>
+        <summary className="note" style={{ cursor: "pointer" }}>Change the words, presenter or voice</summary>
         <div className="form" style={{ marginTop: 8 }}>
       <label>Words the avatar says ({text.length}/1500)
         <textarea value={text} maxLength={1500} onChange={(e) => setText(e.target.value)} style={{ minHeight: 120 }} />
       </label>
       <div className="two">
-        <label>Avatar<select value={avatarId} onChange={(e) => setAvatarId(e.target.value)} disabled={!opts}>
+        <label>AI presenter{photoId ? " (not used: your photo is)" : ""}<select value={avatarId} onChange={(e) => setAvatarId(e.target.value)} disabled={!opts}>
           {opts?.avatars.map((a) => <option key={a.id} value={a.id}>{a.name}{a.gender ? ` · ${a.gender}` : ""}</option>) || <option>Loading…</option>}
         </select></label>
         <label>Voice<select value={voiceId} onChange={(e) => setVoiceId(e.target.value)} disabled={!opts}>

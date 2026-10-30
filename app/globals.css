@@ -242,3 +242,6 @@ button.level[aria-expanded="true"]{background:var(--honey-soft)}
 .tell{display:grid;gap:10px}
 .tell .mic{font-size:16px;padding:8px 18px 8px 8px}
 .tell .mic-dot{width:40px;height:40px;font-size:19px}
+
+.photo-pick{display:grid;grid-template-columns:96px 1fr;gap:14px;align-items:start;padding:12px;border:1px dashed var(--honey);border-radius:14px;background:var(--honey-soft)}
+.photo-pick img,.photo-ph{width:96px;height:96px;border-radius:12px;object-fit:cover;display:grid;place-items:center;font-size:40px;background:var(--panel)}

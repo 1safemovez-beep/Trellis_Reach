@@ -209,7 +209,7 @@ export function Create({ d }: { d: TeamData }) {
       const format = other || K.format;
       const r = await api("/api/agents/create", { format, mode: kind === "ai-video" ? "pro" : "none", vision: tell, profile });
       setOut(r);
-      setAutoRun(kind === "ai-video" && !other ? Date.now() : 0);
+      setAutoRun(0); // wait for "Make the video" so a photo can be added first
     } catch (x: any) { setErr(x.message); } finally { setBusy(false); }
   }
   const text = out ? `${out.title}\n\n${out.script}${out.shots ? `\n\n${kind === "script" ? "FILMING GUIDE" : "SHOT LIST"}\n${out.shots}` : ""}` : "";
