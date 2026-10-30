@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 type G = { headline: string; sub: string; cta: string; badge?: string };
 
 // Draws a premium designed ad image (navy, gold, honeycomb) the AI wrote, ready to download and post.
-export function AdImage({ g, business, onReady }: { g: G; business: string; onReady?: (dataUrl: string) => void }) {
+export function AdImage({ g, business, photo = "", onReady }: { g: G; business: string; photo?: string; onReady?: (dataUrl: string) => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [shape, setShape] = useState<"square" | "story">("square");
   const [url, setUrl] = useState("");
@@ -21,7 +21,18 @@ export function AdImage({ g, business, onReady }: { g: G; business: string; onRe
       const bg = x.createLinearGradient(0, 0, W, H); bg.addColorStop(0, "#0B111E"); bg.addColorStop(1, "#1B2B4B");
       x.fillStyle = bg; x.fillRect(0, 0, W, H);
       await new Promise<void>((res) => { const im = new Image(); im.onload = () => { x.globalAlpha = 0.55; x.drawImage(im, W * 0.15, 0, W * 1.3, H); x.globalAlpha = 1; res(); }; im.onerror = () => res(); im.src = "/hive3d.svg"; });
-      const fade = x.createLinearGradient(0, 0, W, 0); fade.addColorStop(0, "rgba(11,17,30,.96)"); fade.addColorStop(0.65, "rgba(11,17,30,.7)"); fade.addColorStop(1, "rgba(11,17,30,.2)");
+      // Their own photo or logo fills the right side, like a premium magazine ad.
+      if (photo) await new Promise<void>((res) => {
+        const im = new Image();
+        im.onload = () => {
+          const pw = W * 0.55, ph = H, px = W - pw;
+          const s = Math.max(pw / im.width, ph / im.height), dw = im.width * s, dh = im.height * s;
+          x.save(); x.beginPath(); x.rect(px, 0, pw, ph); x.clip();
+          x.drawImage(im, px + (pw - dw) / 2, (ph - dh) / 2, dw, dh); x.restore(); res();
+        };
+        im.onerror = () => res(); im.src = photo;
+      });
+      const fade = x.createLinearGradient(0, 0, W, 0); fade.addColorStop(0, "rgba(11,17,30,.97)"); fade.addColorStop(0.42, "rgba(11,17,30,.88)"); fade.addColorStop(0.62, "rgba(11,17,30,.35)"); fade.addColorStop(1, "rgba(11,17,30,0)");
       x.fillStyle = fade; x.fillRect(0, 0, W, H);
       // Gold frame
       x.strokeStyle = "rgba(212,175,90,.8)"; x.lineWidth = 6; x.strokeRect(36, 36, W - 72, H - 72);
@@ -46,7 +57,7 @@ export function AdImage({ g, business, onReady }: { g: G; business: string; onRe
       const d = c.toDataURL("image/png"); setUrl(d); onReady?.(d);
     })();
     return () => { cancelled = true; };
-  }, [g.headline, g.sub, g.cta, g.badge, business, shape]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [g.headline, g.sub, g.cta, g.badge, business, shape, photo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="form" style={{ gap: 8 }}>

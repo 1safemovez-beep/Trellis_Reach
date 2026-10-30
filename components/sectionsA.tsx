@@ -186,51 +186,58 @@ export function Create({ d }: { d: TeamData }) {
   const [err, setErr] = useState("");
   const [out, setOut] = useState<any>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
-  const [autoRun, setAutoRun] = useState(0);
+  // The upload under the squares: kept and shown right away, saved to storage immediately.
   const [file, setFile] = useState<File | null>(null);
-  const [okToUse, setOkToUse] = useState(false);
+  const [preview, setPreview] = useState("");
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+  const [okToUse, setOkToUse] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
   const resultRef = useRef<HTMLDivElement>(null);
   const K = MAKE_KINDS.find((k) => k.id === kind)!;
+  const isImg = Boolean(file && file.type.startsWith("image/"));
+  const isVid = Boolean(file && file.type.startsWith("video/"));
   useEffect(() => { if (out && resultRef.current) resultRef.current.scrollIntoView({ behavior: "smooth", block: "start" }); }, [out]);
 
-  // Talking picks the business too, if you name one of them.
   function heard(t: string) {
     setTell((v) => (v ? v + " " : "") + t);
     const hit = names.find((n) => t.toLowerCase().includes(n.toLowerCase()));
     if (hit) setBiz(hit);
   }
 
+  async function pick(f: File | null) {
+    if (!f) return;
+    if (!okToUse) { setErr("Tick the box first: it's your own, and anyone shown agreed."); return; }
+    if (f.size > 100 * 1024 * 1024) { setErr("That file is over 100 MB. Use a shorter or smaller one."); return; }
+    setErr(""); setFile(f); setPreview(URL.createObjectURL(f)); setMediaUrl(null); setUploading(true);
+    try {
+      const path = `${Date.now()}-${f.name.replace(/[^\w.-]+/g, "_")}`;
+      const { error } = await supabase().storage.from("creator-uploads").upload(path, f, { contentType: f.type });
+      if (error) throw new Error(`Upload failed: ${error.message}`);
+      setMediaUrl(supabase().storage.from("creator-uploads").getPublicUrl(path).data.publicUrl);
+      toast("Uploaded ✓");
+    } catch (x: any) { setErr(x.message); } finally { setUploading(false); }
+  }
+  function clearFile() { setFile(null); setPreview(""); setMediaUrl(null); }
+
   async function go() {
-    setErr(""); setBusy(true); setSavedId(null); setOut(null); setMediaUrl(null); setImageUrl("");
+    setErr(""); setBusy(true); setSavedId(null); setOut(null); setImageUrl("");
     try {
       const profile = d.businesses.find((b) => b.business_name === biz) || { business_name: biz };
       const format = other || K.format;
-      const r = await api("/api/agents/create", { format, mode: kind === "ai-video" ? "pro" : "none", vision: tell, profile });
+      const media = isVid ? "The owner uploaded their own video: write the caption, on-screen text and hook to go with it." : isImg ? (kind === "ai-video" ? "The owner's own photo will be the presenter: write it in their voice, first person." : "The owner uploaded their own photo or logo, which will be the ad's picture: write to match it.") : "";
+      const r = await api("/api/agents/create", { format, mode: kind === "ai-video" ? "pro" : "none", vision: [tell, media].filter(Boolean).join("\n"), profile });
       setOut(r);
-      setAutoRun(0); // wait for "Make the video" so a photo can be added first
     } catch (x: any) { setErr(x.message); } finally { setBusy(false); }
   }
   const text = out ? `${out.title}\n\n${out.script}${out.shots ? `\n\n${kind === "script" ? "FILMING GUIDE" : "SHOT LIST"}\n${out.shots}` : ""}` : "";
 
-  async function upload(): Promise<string | null> {
-    if (!file) return null;
-    if (!okToUse) throw new Error("Tick the box to confirm you can use this file.");
-    const path = `${Date.now()}-${file.name.replace(/[^\w.-]+/g, "_")}`;
-    const { error } = await supabase().storage.from("creator-uploads").upload(path, file, { contentType: file.type });
-    if (error) throw new Error(`Upload failed: ${error.message}`);
-    const url = supabase().storage.from("creator-uploads").getPublicUrl(path).data.publicUrl;
-    setMediaUrl(url);
-    return url;
-  }
-
   // Saves once and remembers the row, so "Make video" and "Save" never create duplicates.
   async function saveRow(): Promise<string | null> {
     if (savedId) return savedId;
-    let media = mediaUrl || (await upload());
+    let media = mediaUrl;
     // Save the AI-designed ad image too, so it shows in the Library and can be shared.
-    if (!media && imageUrl) {
+    if (imageUrl) {
       const blob = await (await fetch(imageUrl)).blob();
       const path = `ai-ad-${Date.now()}.png`;
       const { error: upErr } = await supabase().storage.from("creator-uploads").upload(path, blob, { contentType: "image/png" });
@@ -247,33 +254,43 @@ export function Create({ d }: { d: TeamData }) {
   }
   async function save() {
     if (savedId) return toast("Already in your Library");
-    try { await saveRow(); toast("Saved to your Library"); } catch (x: any) { toast(x.message); }
+    try { await saveRow(); toast("Saved to your Library 🐝"); } catch (x: any) { toast(x.message); }
   }
+
+  const uploadLabel = kind === "ai-ad" ? "Add your photo or logo for the ad" : kind === "ai-video" ? "Add your photo to star in the video" : kind === "creator" ? "Upload your video or image" : "";
+  const accept = kind === "ai-video" ? "image/jpeg,image/png" : "image/*,video/*";
 
   return (
     <section className="view">
       <Head eyebrow="Create" title="What do you want to make?" />
       <div className="kinds">
         {MAKE_KINDS.map((k) => (
-          <button key={k.id} type="button" className="kind" aria-pressed={kind === k.id && !other} onClick={() => { setKind(k.id); setOther(""); }}>
+          <button key={k.id} type="button" className="kind" aria-pressed={kind === k.id && !other} onClick={() => { setKind(k.id); setOther(""); setOut(null); }}>
             <span className="kind-icon" aria-hidden="true">{k.icon}</span><b>{k.label}</b><small>{k.hint}</small>
           </button>
         ))}
       </div>
+      {uploadLabel && !other && (
+        <div className="drop">
+          {preview ? (isVid ? <video src={preview} controls playsInline /> : <img src={preview} alt="Your upload" />) : <span className="drop-ph" aria-hidden="true">{kind === "creator" ? "🎞️" : "🖼️"}</span>}
+          <div className="form" style={{ gap: 6 }}>
+            <b>{mediaUrl ? "✅ Added" : uploading ? "Uploading…" : uploadLabel}<span className="note"> {kind === "creator" ? "" : "(optional)"}</span></b>
+            <label className="checkline"><input type="checkbox" checked={okToUse} onChange={(e) => setOkToUse(e.target.checked)} /><span>It's my own, and anyone shown agreed.</span></label>
+            <div className="row">
+              <label className="btn honey small" style={{ cursor: "pointer" }}>{file ? "Change file" : "⬆ Upload"}<input type="file" accept={accept} hidden onChange={(e) => { pick(e.target.files?.[0] || null); e.target.value = ""; }} /></label>
+              {file && <button className="btn small" type="button" onClick={clearFile}>Remove</button>}
+            </div>
+          </div>
+        </div>
+      )}
       <div className="panel form">
         <label>For<select id="cr-biz" value={biz} onChange={(e) => setBiz(e.target.value)}>{names.map((n) => <option key={n}>{n}</option>)}</select></label>
         <div className="tell">
           <MicButton label="Tell the AI what you want" onText={heard} />
-          <textarea value={tell} onChange={(e) => setTell(e.target.value)} placeholder="Or type it. Example: an ad for busy roofers, confident and premium, push the free estimate" />
+          <textarea value={tell} onChange={(e) => setTell(e.target.value)} placeholder="Or type it here" />
         </div>
-        {kind === "creator" && !other && (
-          <div className="form" style={{ gap: 8 }}>
-            <label>Upload your video or image (optional now, you can add it later)<input type="file" accept="image/*,video/*" onChange={(e) => setFile(e.target.files?.[0] || null)} /></label>
-            {file && <label className="checkline"><input type="checkbox" checked={okToUse} onChange={(e) => setOkToUse(e.target.checked)} /><span>This is my own work, and anyone shown agreed to be in it.</span></label>}
-          </div>
-        )}
         <div className="row">
-          <button className="btn honey" type="button" onClick={go} disabled={busy} style={{ fontSize: 17, padding: "14px 24px" }}>{busy ? "Working on it…" : other ? "✨ Write it" : `${K.icon} Make my ${K.label}`}</button>
+          <button className="btn honey" type="button" onClick={go} disabled={busy || uploading} style={{ fontSize: 17, padding: "14px 24px" }}>{busy ? "Working on it…" : other ? "✨ Write it" : `${K.icon} Make my ${K.label}`}</button>
           {err && <span className="err">{err}</span>}
         </div>
         <details>
@@ -286,21 +303,33 @@ export function Create({ d }: { d: TeamData }) {
       </div>
 
       {out && (
-        <div className="panel form" ref={resultRef}>
+        <div className="panel form result" ref={resultRef}>
+          <span className="eyebrow">{other || `${K.icon} ${K.label}`} · {biz}</span>
           <h3 style={{ margin: 0 }}>{out.title}</h3>
-          {out.graphic && <AdImage g={out.graphic} business={biz} onReady={setImageUrl} />}
-          {kind === "ai-video" && !other && <VideoMaker words={out.voiceover || out.script} ensureSaved={saveRow} auto={autoRun} />}
-          {mediaUrl && (/\.(mp4|mov|webm)$/i.test(mediaUrl) ? <video className="hive-video" src={mediaUrl} controls playsInline /> : <img src={mediaUrl} alt="" style={{ width: "100%", borderRadius: 12 }} />)}
-          <details open={kind !== "ai-video"}>
-            <summary className="note" style={{ cursor: "pointer" }}>{kind === "script" ? "Your script and filming guide" : kind === "creator" ? "Creator brief" : kind === "ai-ad" ? "Post caption" : "Script"}</summary>
-            <div className="out" style={{ marginTop: 6 }}>{text}</div>
-          </details>
+
+          {kind === "ai-ad" && !other && (out.graphic
+            ? <AdImage g={out.graphic} business={biz} photo={isImg ? preview : ""} onReady={setImageUrl} />
+            : <p className="note">The design didn't come back. Tap "Try another".</p>)}
+
+          {kind === "ai-video" && !other && <VideoMaker words={out.voiceover || out.script} ensureSaved={saveRow} photoFile={isImg ? file : null} />}
+
+          {kind === "creator" && !other && preview && (isVid ? <video className="hive-video" src={preview} controls playsInline /> : <img src={preview} alt="" style={{ width: "100%", borderRadius: 12 }} />)}
+
+          {kind === "script" && !other ? (
+            <div className="prompter">{out.script}</div>
+          ) : (
+            <details open={Boolean(other) || kind === "creator"}>
+              <summary className="note" style={{ cursor: "pointer" }}>{kind === "creator" ? "Creator brief and caption" : kind === "ai-ad" ? "Post caption" : "Script"}</summary>
+              <div className="out" style={{ marginTop: 6 }}>{text}</div>
+            </details>
+          )}
+          {kind === "script" && !other && out.shots && <details><summary className="note" style={{ cursor: "pointer" }}>🎥 Filming guide</summary><div className="out" style={{ marginTop: 6 }}>{out.shots}</div></details>}
+
           <div className="row">
             <button className="btn primary" type="button" onClick={save}>Save to Library</button>
             <button className="btn small" type="button" onClick={() => copyText(text, toast)}>Copy words</button>
             <button className="btn small" type="button" onClick={go} disabled={busy}>↻ Try another</button>
           </div>
-          {imageUrl && <p className="note" style={{ margin: 0 }}>Tip: download the image and post it with the caption, or use Share after saving.</p>}
         </div>
       )}
     </section>

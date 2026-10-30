@@ -7,7 +7,7 @@ type Opt = { id: string; name: string; language?: string; gender?: string; mine?
 let cached: { avatars: Opt[]; voices: Opt[] } | null = null;
 
 // HeyGen video maker. The avatar reads the words in the box exactly as written.
-export function VideoMaker({ words, ensureSaved, auto = 0 }: { words: string; ensureSaved: () => Promise<string | null>; auto?: number }) {
+export function VideoMaker({ words, ensureSaved, auto = 0, photoFile = null }: { words: string; ensureSaved: () => Promise<string | null>; auto?: number; photoFile?: File | null }) {
   const [text, setText] = useState(words);
   const [opts, setOpts] = useState(cached);
   const [avatarId, setAvatarId] = useState("");
@@ -19,9 +19,12 @@ export function VideoMaker({ words, ensureSaved, auto = 0 }: { words: string; en
   const [photoOk, setPhotoOk] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
 
-  async function usePhoto(f: File | null) {
+  // A photo added under the squares (already permission-checked there) is used automatically.
+  useEffect(() => { if (photoFile && /^image\/(jpeg|png)$/.test(photoFile.type) && !photoId) { setPhotoOk(true); usePhoto(photoFile, true); } }, [photoFile]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function usePhoto(f: File | null, ok = photoOk) {
     if (!f) return;
-    if (!photoOk) { setErr("Tick the box first: it's you, or you have their written permission."); return; }
+    if (!ok) { setErr("Tick the box first: it's you, or you have their written permission."); return; }
     setErr(""); setPhotoBusy(true); setPhotoPreview(URL.createObjectURL(f));
     try {
       const { data } = await supabase().auth.getSession();
@@ -75,7 +78,7 @@ export function VideoMaker({ words, ensureSaved, auto = 0 }: { words: string; en
   const busy = state === "starting" || state === "making" || state === "loading";
   return (
     <div className="panel form" style={{ marginTop: 12 }}>
-      <h3 style={{ margin: 0 }}>🎬 Step 2: make the video</h3>
+      <h3 style={{ margin: 0 }}>🎬 Make the video</h3>
       {err && /isn't set up|key is wrong|401/i.test(err) && (
         <div className="warn">Video isn't connected yet. In Vercel → Settings → Environment Variables, add <b>HEYGEN_API_KEY</b> with your HeyGen API key, then Redeploy.</div>
       )}
