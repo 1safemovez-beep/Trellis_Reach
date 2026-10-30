@@ -1,17 +1,48 @@
 "use client";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 // Team sign-in. Two ways in:
 //  1. Email code: Supabase emails a link and a 6-digit code (type the code here).
 //  2. Password: for accounts created in Supabase → Authentication → Users → Add user.
 export default function Login() {
-  const [mode, setMode] = useState<"code" | "password">("code");
+  const [mode, setMode] = useState<"code" | "password" | "newpass">("code");
   const [step, setStep] = useState<"email" | "verify">("email");
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // Coming back from a "reset password" email: let them choose a new password.
+  useEffect(() => {
+    const { data } = supabase().auth.onAuthStateChange((event) => { if (event === "PASSWORD_RECOVERY") { setMode("newpass"); setMsg("Choose your new password."); } });
+    if (window.location.hash.includes("type=recovery")) setMode("newpass");
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  async function forgot() {
+    if (!email.trim()) return setErr("Type your email above first.");
+    setErr(""); setMsg(""); setBusy(true);
+    try {
+      const { error } = await supabase().auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo: `${window.location.origin}/login` });
+      if (error) throw error;
+      setMsg("Sent. Check your inbox and spam folder for the reset link, then choose a new password.");
+    } catch (x) { setErr(explain(x)); } finally { setBusy(false); }
+  }
+
+  async function setNewPassword(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const p1 = String(f.get("p1") || ""), p2 = String(f.get("p2") || "");
+    if (p1.length < 8) return setErr("Use at least 8 characters.");
+    if (p1 !== p2) return setErr("The two passwords don't match.");
+    setErr(""); setBusy(true);
+    try {
+      const { error } = await supabase().auth.updateUser({ password: p1 });
+      if (error) throw error;
+      window.location.href = "/app";
+    } catch (x) { setErr(explain(x)); } finally { setBusy(false); }
+  }
 
   function explain(e: any): string {
     const m = String(e?.message || e || "");
@@ -68,7 +99,14 @@ export default function Login() {
           <button type="button" className={"btn small" + (mode === "code" ? " primary" : "")} onClick={() => { setMode("code"); setErr(""); }}>Email code</button>
           <button type="button" className={"btn small" + (mode === "password" ? " primary" : "")} onClick={() => { setMode("password"); setErr(""); }}>Password</button>
         </div>
-        <label>Email<input id="login-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+        {mode !== "newpass" && <label>Email<input id="login-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>}
+        {mode === "newpass" && (
+          <form className="form" onSubmit={setNewPassword}>
+            <label>New password<input name="p1" type="password" required autoComplete="new-password" minLength={8} /></label>
+            <label>Type it again<input name="p2" type="password" required autoComplete="new-password" minLength={8} /></label>
+            <button className="btn primary" disabled={busy}>Save password and sign in</button>
+          </form>
+        )}
 
         {mode === "code" && step === "email" && (
           <form className="form" onSubmit={sendCode}>
@@ -88,6 +126,7 @@ export default function Login() {
           <form className="form" onSubmit={withPassword}>
             <label>Password<input id="login-pass" name="password" type="password" required autoComplete="current-password" /></label>
             <button className="btn primary" disabled={busy || !email}>Sign in</button>
+            <button type="button" className="btn small" onClick={forgot} disabled={busy}>Forgot password?</button>
           </form>
         )}
 
