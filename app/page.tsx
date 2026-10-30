@@ -121,7 +121,8 @@ export default function Hivecast() {
   function ask(e: FormEvent) { e.preventDefault(); sendChat(q); }
 
   return (
-    <main className="wrap" style={{ paddingBlock: "24px 60px", display: "grid", gap: 16 }}>
+    <main className="wrap" style={{ paddingBlock: "16px 60px", display: "grid", gap: 16 }}>
+      <div className="row" style={{ justifyContent: "flex-end" }}><a className="btn small" href="/login">🔑 Team sign in</a></div>
       <div className="hive">
         <div className="hive-top">
           <img className="hive3d" src="/hive3d.svg" alt="" aria-hidden="true" />
