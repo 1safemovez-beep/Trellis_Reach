@@ -212,3 +212,8 @@ button.level[aria-expanded="true"]{background:var(--honey-soft)}
 .warn{margin:0;padding:10px 12px;border-radius:10px;background:var(--bad-soft);color:var(--bad);font-size:14px}
 .checkline{display:flex!important;gap:8px;align-items:flex-start;font-weight:400;color:var(--ink)}
 .checkline input{width:auto;margin-top:3px}
+/* Password with show/hide eye */
+.pw{position:relative;display:block}
+.pw input{padding-right:44px}
+.pw-eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--muted);padding:8px;cursor:pointer;display:grid;place-items:center;border-radius:8px}
+.pw-eye:hover{color:var(--ink)}

@@ -1,6 +1,7 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { PasswordInput } from "@/components/password";
 
 // Team sign-in. Two ways in:
 //  1. Email code: Supabase emails a link and a 6-digit code (type the code here).
@@ -15,7 +16,7 @@ export default function Login() {
 
   // Coming back from a "reset password" email: let them choose a new password.
   useEffect(() => {
-    const { data } = supabase().auth.onAuthStateChange((event) => { if (event === "PASSWORD_RECOVERY") { setMode("newpass"); setMsg("Choose your new password."); } });
+    const { data } = supabase().auth.onAuthStateChange((event: string) => { if (event === "PASSWORD_RECOVERY") { setMode("newpass"); setMsg("Choose your new password."); } });
     if (window.location.hash.includes("type=recovery")) setMode("newpass");
     return () => data.subscription.unsubscribe();
   }, []);
@@ -102,8 +103,8 @@ export default function Login() {
         {mode !== "newpass" && <label>Email<input id="login-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>}
         {mode === "newpass" && (
           <form className="form" onSubmit={setNewPassword}>
-            <label>New password<input name="p1" type="password" required autoComplete="new-password" minLength={8} /></label>
-            <label>Type it again<input name="p2" type="password" required autoComplete="new-password" minLength={8} /></label>
+            <label>New password<PasswordInput name="p1" autoComplete="new-password" minLength={8} /></label>
+            <label>Type it again<PasswordInput name="p2" autoComplete="new-password" minLength={8} /></label>
             <button className="btn primary" disabled={busy}>Save password and sign in</button>
           </form>
         )}
@@ -124,7 +125,7 @@ export default function Login() {
         )}
         {mode === "password" && (
           <form className="form" onSubmit={withPassword}>
-            <label>Password<input id="login-pass" name="password" type="password" required autoComplete="current-password" /></label>
+            <label>Password<PasswordInput id="login-pass" name="password" autoComplete="current-password" /></label>
             <button className="btn primary" disabled={busy || !email}>Sign in</button>
             <button type="button" className="btn small" onClick={forgot} disabled={busy}>Forgot password?</button>
           </form>
