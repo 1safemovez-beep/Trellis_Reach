@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { videoStatus } from "@/lib/heygen";
+import { logError, videoStatus } from "@/lib/heygen";
 import { clean, fail, requireTeam, supabaseAdmin } from "@/lib/server";
 
 // Checks a video and returns a fresh link to play it.
@@ -11,11 +11,12 @@ export async function POST(req: Request) {
   if (!videoId) return fail("Unknown video.");
   try {
     const s = await videoStatus(videoId);
-    if (s.status === "completed" || s.status === "failed") {
-      await supabaseAdmin().from("content").update({ video_status: s.status }).eq("video_id", videoId);
-    }
+    // Save whatever HeyGen says each time, so it can be checked from the database.
+    await supabaseAdmin().from("content").update({ video_status: s.status === "failed" ? `failed: ${String(s.error || "").slice(0, 200)}` : s.status }).eq("video_id", videoId);
+    if (s.status === "failed") await logError("video status", `${videoId} ${s.error || ""}`);
     return NextResponse.json(s);
   } catch (e: any) {
+    await logError("video status check", e.message);
     return fail(e.message, 503);
   }
 }

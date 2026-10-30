@@ -159,7 +159,7 @@ export function PlaySaved({ videoId, status }: { videoId: string; status?: strin
         else setMsg(x.message);
       }
     }
-    if (status === "failed") setMsg("This video failed. Make it again from Create.");
+    if ((status || "").startsWith("failed")) setMsg(`This video failed${status && status.length > 7 ? ` (${status.slice(8)})` : ""}. Make it again from Create.`);
     else load();
     return () => { alive = false; clearTimeout(timer.current); };
   }, [videoId, status]);

@@ -64,7 +64,7 @@ export function Library({ d, go }: { d: TeamData; go: (t: string) => void }) {
           {items.map((c, i) => (
             <div key={c.id} className={"lib-card" + (i === 0 && show === "all" ? " lib-new" : "")}>
               {c.video_id ? <PlaySaved videoId={c.video_id} status={c.video_status} />
-                : c.video_mode === "AI Video" ? <div className="empty" style={{ margin: 12 }}>{c.video_status === "failed" ? "⚠️ The video didn't go through. Open Create and try Make the video again." : "No video made yet. Open Create → AI Video → Make the video."}</div>
+                : c.video_mode === "AI Video" ? <div className="empty" style={{ margin: 12 }}>{(c.video_status || "").startsWith("failed") ? "⚠️ The video didn't go through. Open Create and try Make the video again." : "No video made yet. Open Create → AI Video → Make the video."}</div>
                 : c.media_url ? (/\.(mp4|mov|webm)(\?|$)/i.test(c.media_url) ? <video className="hive-video" src={c.media_url} controls playsInline /> : <img src={c.media_url} alt={c.title} style={{ width: "100%", display: "block" }} />)
                 : c.video_id ? <PlaySaved videoId={c.video_id} status={c.video_status} /> : isAdFormat(c.type) ? <AdPreview business={c.business || "Trellis Reach"} title={c.title} text={adCopy(c.body)} /> : null}
               <div className="lib-body">
