@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   try {
     const s = await videoStatus(videoId);
     // Save whatever HeyGen says each time, so it can be checked from the database.
-    await supabaseAdmin().from("content").update({ video_status: s.status === "failed" ? `failed: ${String(s.error || "").slice(0, 200)}` : s.status }).eq("video_id", videoId);
+    await supabaseAdmin().from("content").update({ video_status: s.status === "failed" ? `failed: ${String(s.error || "").slice(0, 200)}` : s.status, video_checked_at: new Date().toISOString() }).eq("video_id", videoId);
     if (s.status === "failed") await logError("video status", `${videoId} ${s.error || ""}`);
     return NextResponse.json(s);
   } catch (e: any) {
