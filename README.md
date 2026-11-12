@@ -69,6 +69,10 @@ Open `https://qvtrellis.net/api/health`. Every line should say `true`. If one sa
 | `schemaInstalled` | Run `supabase/schema.sql` in the Supabase SQL Editor. |
 | `teamHasOwner` | Run the `insert into team_members …` line with your email. |
 
+### Updating the database later
+
+`supabase/schema.sql` is the full starting setup and is safe to run again. When a new feature needs database changes, it comes with its own file in `supabase/migrations/` (named by date). Run each new file once in **Supabase → SQL Editor**, in date order, before using the feature. Every file skips anything that already exists, so running one twice does no harm.
+
 ### Email sign-in codes
 
 Supabase's built-in email only sends to the email on your Supabase account, and only 2 emails per hour. That's why codes may not arrive. For the team, use password sign-in. To send codes to anyone:

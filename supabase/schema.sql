@@ -1,5 +1,5 @@
 -- Trellis Reach database schema (Supabase / Postgres)
--- Run this once in Supabase → SQL Editor → New query → Run.
+-- Run this in Supabase → SQL Editor → New query → Run. It is safe to run again later.
 -- Security model:
 --   * Only people listed in team_members can read or change anything.
 --   * Public funnel visitors never touch the database directly. Their leads arrive through
@@ -159,7 +159,15 @@ drop policy if exists settings_write on settings;
 create policy settings_write on settings for update using (is_admin()) with check (is_admin());
 
 -- Live updates for the dashboard
-alter publication supabase_realtime add table leads, content, bookings, posts, businesses, settings;
+do $$
+declare t text;
+begin
+  foreach t in array array['leads','content','bookings','posts','businesses','settings'] loop
+    if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t) then
+      execute format('alter publication supabase_realtime add table %I', t);
+    end if;
+  end loop;
+end $$;
 
 -- FIRST-TIME SETUP: add yourself as owner (change the email, then run this line)
 -- insert into team_members (email, role) values ('you@example.com', 'owner');
@@ -199,3 +207,107 @@ drop policy if exists challenge_entries_update on challenge_entries;
 create policy challenge_entries_update on challenge_entries for update using (creator_id = (select auth.uid()) or is_admin()) with check (creator_id = (select auth.uid()) or is_admin());
 drop policy if exists challenge_entries_delete on challenge_entries;
 create policy challenge_entries_delete on challenge_entries for delete using (creator_id = (select auth.uid()) or is_admin());
+
+-- =====================================================================================
+-- Added after the first release. These are things the app already uses that this file
+-- was missing (a fresh setup would have broken without them). Every statement skips what
+-- already exists, so running this file again on your live database changes nothing that's
+-- already there and never touches your saved data.
+-- =====================================================================================
+
+-- Ad media, release flag and "use as example" on saved content and contest entries.
+alter table content add column if not exists media_url text;
+alter table content add column if not exists release_status text;
+alter table content add column if not exists featured boolean not null default false;
+alter table challenge_entries add column if not exists media_url text;
+
+-- What every AI agent knows about your businesses (Settings → "What the AI knows").
+create table if not exists app_knowledge (
+  name text primary key,
+  about text not null default '',
+  sort int not null default 0,
+  updated_at timestamptz not null default now()
+);
+
+-- Plans and prices (Settings → "Plans and prices"). The chat AI only quotes active plans.
+create table if not exists price_plans (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  monthly numeric,
+  yearly numeric,
+  setup_fee numeric,
+  includes text,
+  payment_plan text,
+  active boolean not null default false,
+  sort int not null default 0,
+  updated_at timestamptz not null default now()
+);
+
+-- Quiet error log written by the server (for example when a video fails).
+create table if not exists app_errors (
+  id uuid primary key default gen_random_uuid(),
+  area text,
+  message text,
+  created_at timestamptz not null default now()
+);
+
+-- Media releases: anyone shown in an ad agrees (or a parent/guardian agrees for a child).
+create table if not exists media_releases (
+  id uuid primary key default gen_random_uuid(),
+  media_url text,
+  person_name text not null,
+  person_email text,
+  business text,
+  products text,
+  is_self boolean not null default false,
+  is_minor boolean not null default false,
+  guardian_name text,
+  guardian_relationship text,
+  status text not null default 'Pending' check (status in ('Pending','Signed')),
+  signature text,
+  signed_at timestamptz,
+  content_id uuid references content(id) on delete set null,
+  entry_id uuid references challenge_entries(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+alter table app_knowledge   enable row level security;
+alter table price_plans     enable row level security;
+alter table app_errors      enable row level security;
+alter table media_releases  enable row level security;
+
+-- Policies are only created when a policy with that name isn't there yet.
+do $$
+begin
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'app_knowledge' and policyname = 'app_knowledge_read') then
+    create policy app_knowledge_read on app_knowledge for select using (is_team());
+  end if;
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'app_knowledge' and policyname = 'app_knowledge_write') then
+    create policy app_knowledge_write on app_knowledge for all using (is_admin()) with check (is_admin());
+  end if;
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'price_plans' and policyname = 'price_plans_read') then
+    create policy price_plans_read on price_plans for select using (is_team());
+  end if;
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'price_plans' and policyname = 'price_plans_write') then
+    create policy price_plans_write on price_plans for all using (is_admin()) with check (is_admin());
+  end if;
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'app_errors' and policyname = 'app_errors_read') then
+    create policy app_errors_read on app_errors for select using (is_admin());
+  end if;
+  -- Releases are written by the server (service role). The team can read them.
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'media_releases' and policyname = 'media_releases_read') then
+    create policy media_releases_read on media_releases for select using (is_team());
+  end if;
+end $$;
+
+-- File storage for uploaded photos and videos. Public links are used to show them on ads.
+insert into storage.buckets (id, name, public) values ('creator-uploads', 'creator-uploads', true)
+on conflict (id) do nothing;
+
+do $$
+begin
+  if not exists (select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'creator_uploads_team_insert') then
+    create policy creator_uploads_team_insert on storage.objects for insert to authenticated
+      with check (bucket_id = 'creator-uploads' and is_team());
+  end if;
+end $$;
