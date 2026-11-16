@@ -3,6 +3,7 @@ import { askJSON, COMPLIANCE_RULES } from "@/lib/ai";
 import { CONTENT_FORMATS, SALES_GUIDES, VIDEO_MODES } from "@/lib/constants";
 import { clean, fail, requireTeam } from "@/lib/server";
 import { knowledge } from "@/lib/knowledge";
+import { brandMemory } from "@/lib/brandmemory";
 
 // Agent 2: Creator AI. Writes ads, video scripts and messages with locked key points.
 export async function POST(req: Request) {
@@ -15,6 +16,7 @@ export async function POST(req: Request) {
   const description = clean(b?.description, 1500);
   if (mode.id === "describe" && !description) return fail("Describe the video first.");
   const about = await knowledge(b?.profile?.business_name || b?.profile?.app);
+  const memory = await brandMemory(b?.profile?.business_name);
   try {
     const r = await askJSON<{ title: string; script: string; shots: string; voiceover: string; keyPointsCovered: string[]; graphic?: any }>({
       maxTokens: 4000,
@@ -23,6 +25,7 @@ Use proven direct-response structure (hook, problem and its cost, the shift, the
 LOCKED key points, in order: 1) a hook in the first 3 seconds or first line, 2) the problem and what it costs, 3) the answer: what the business does, 4) proof, 5) one clear call to action into the Hivecast funnel.
 ${COMPLIANCE_RULES}
 ${about}
+${memory}
 When the business is one of ours, the ad is for that app or program: use what we know about it as the source of truth.
 For video formats include a shot list with timing, wardrobe, setting and mood.
 ${format === "Designed image ad" ? 'This is a single designed image ad (feed post). Also return "graphic": {"headline": max 7 words, "sub": max 14 words, "cta": max 4 words, "badge": max 3 words or ""} for the image itself. "script" is the post caption. "shots" is empty.' : ""}

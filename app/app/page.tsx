@@ -8,9 +8,10 @@ import { Calendar, Community, FollowUp, Graphs, Leads, Settings } from "@/compon
 import { Share } from "@/components/share";
 import { HiveChallenge } from "@/components/hive";
 import { Library } from "@/components/library";
+import { Results } from "@/components/results";
 
 const TABS = [
-  ["board", "Money Board"], ["chef", "Marketing Chief"], ["create", "Create"], ["library", "Library"], ["share", "Share"], ["hive", "Hive Challenge"], ["graphs", "Graphs"], ["leads", "Leads & Data"],
+  ["board", "Money Board"], ["chef", "Marketing Chief"], ["create", "Create"], ["library", "Library"], ["results", "Results"], ["share", "Share"], ["hive", "Hive Challenge"], ["graphs", "Graphs"], ["leads", "Leads & Data"],
   ["followup", "Follow-up"], ["calendar", "Calendar"], ["community", "Community"], ["settings", "Settings"],
 ] as const;
 
@@ -89,6 +90,7 @@ export default function Dashboard() {
         {tab === "chef" && <Chief d={d} />}
         {tab === "create" && <Create d={d} />}
         {tab === "library" && <Library d={d} go={go} />}
+        {tab === "results" && <Results d={d} />}
         {tab === "share" && <Share d={d} />}
         {tab === "hive" && <HiveChallenge d={d} />}
         {tab === "graphs" && <Graphs d={d} />}

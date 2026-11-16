@@ -260,3 +260,8 @@ section.view>div:first-child>h2::after{content:" 🐝";font-size:.7em}
 nav button[aria-current="page"]{background:var(--honey-soft);color:var(--honey-ink);box-shadow:inset 0 -2px 0 var(--honey)}
 .empty{border-color:color-mix(in srgb,var(--honey) 45%,transparent);background:repeating-linear-gradient(135deg,transparent 0 14px,rgba(212,175,90,.05) 14px 15px)}
 @media(max-width:560px){.drop{grid-template-columns:1fr}.drop img,.drop video,.drop-ph{width:100%;height:auto;max-height:260px}}
+
+/* Results table (Results & Clients tab) */
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th{text-align:left;font:600 12px var(--body);color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}

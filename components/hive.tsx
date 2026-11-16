@@ -143,6 +143,10 @@ export function HiveChallenge({ d }: { d: TeamData }) {
     await supabase().from("challenges").update({ status: "Winner picked", winner_entry: x.id }).eq("id", c.id);
     toast("👑 Winner crowned");
   }
+  async function testWinner(c: Challenge) {
+    try { const r = await api("/api/agents/winner-test", { challengeId: c.id }); toast(r.already ? "Already in your Library as a winner test" : "Added to your Library as a winner test. Ask the client to approve it, then share it."); }
+    catch (y: any) { toast(y.message); }
+  }
   async function rejudge(x: Entry) {
     try { const r = await api("/api/agents/judge", { entryId: x.id }); toast(r.safety_ok ? `Scored ${r.ai_score}/100` : "Still needs fixes"); } catch (y: any) { toast(y.message); }
   }
@@ -224,6 +228,7 @@ export function HiveChallenge({ d }: { d: TeamData }) {
                   {x.ai_notes && (me.admin || x.creator_id === me.id) && <p className="note" style={{ margin: 0 }}>🤖 Judge: {x.ai_notes}</p>}
                   <div className="row">
                     {x.creator_id === me.id && x.status === "Needs fixes" && <button className="btn small" type="button" onClick={() => rejudge(x)}>I fixed it, check again</button>}
+                    {me.admin && x.status === "Winner" && <button className="btn small honey" type="button" onClick={() => testWinner(c)}>🧪 Test on a real campaign</button>}
                     {me.admin && c.status === "Judging" && x.status === "Finalist" && <button className="btn small honey" type="button" onClick={() => pickWinner(c, x)}>👑 Client picks this one</button>}
                   </div>
                 </div>

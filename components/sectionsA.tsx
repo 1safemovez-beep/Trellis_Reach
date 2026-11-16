@@ -136,6 +136,18 @@ export function Chief({ d }: { d: TeamData }) {
     toast(error ? `Couldn't save: ${error.message}` : "Business saved");
   }
 
+  const [building, setBuilding] = useState(false);
+  // One tap: saves the business and builds a starter campaign (ad, social post, email) as approval-needed drafts.
+  async function buildCampaign() {
+    if (!fields.business_name) return toast("Tell the Chief the business name first");
+    setBuilding(true);
+    try {
+      const r = await api("/api/agents/campaign", { fields });
+      toast(`Campaign ready: ${r.items.length} drafts in your Library 🐝`);
+      window.dispatchEvent(new CustomEvent("tr-go", { detail: "library" }));
+    } catch (x: any) { toast(x.message); } finally { setBuilding(false); }
+  }
+
   return (
     <section className="view">
       <Head eyebrow="Agent 1 · Marketing Chief" title="Talk to the Chief about your business" lead="Tap Start talking. The Chief asks one question at a time out loud, listens to your answer, and fills every field for you. Type only to fix a misheard word." />
@@ -166,7 +178,8 @@ export function Chief({ d }: { d: TeamData }) {
           <div className="slots">{PROFILE_SLOTS.map(([k, l]) => <div className="slot" key={k}><b>{l}</b><span>{fields[k] || ""}</span></div>)}</div>
           <div className="row" style={{ marginTop: 12 }}>
             <button className="btn primary" type="button" onClick={save}>Save business</button>
-            <span className="note">Saved businesses feed the Create and Follow-up agents.</span>
+            <button className="btn honey" type="button" disabled={building} onClick={buildCampaign}>{building ? "Building…" : "⚡ Build my campaign"}</button>
+            <span className="note">Saved businesses feed the Create and Follow-up agents. "Build my campaign" makes an ad, a social post and an email as drafts that need client approval.</span>
           </div>
           <h3 style={{ marginTop: 18 }}>Saved businesses</h3>
           {d.businesses.length ? d.businesses.map((b) => <div className="post" key={b.id}><b>{b.business_name}</b><span className="who">{b.app} · {b.offer}</span></div>) : <p className="note">None yet.</p>}
