@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { askJSON, COMPLIANCE_RULES } from "@/lib/ai";
 import { clean, fail, requireTeam, supabaseAdmin } from "@/lib/server";
 import { knowledge } from "@/lib/knowledge";
+import { brandMemory } from "@/lib/brandmemory";
 
 // Hive Challenge judge: safety check plus a score out of 100 with tips for the creator.
 export async function POST(req: Request) {
@@ -12,7 +13,7 @@ export async function POST(req: Request) {
   const db = supabaseAdmin();
   const { data: entry } = await db.from("challenge_entries").select("*, challenges(brief, client, business)").eq("id", entryId).maybeSingle();
   if (!entry) return fail("Entry not found.");
-  const about = await knowledge(entry.challenges?.business);
+  const about = (await knowledge(entry.challenges?.business)) + "\n" + (await brandMemory(entry.challenges?.business || entry.challenges?.client));
   try {
     const r = await askJSON<{ safetyOk: boolean; score: number; notes: string }>({
       quick: true,

@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/server";
 import { videoStatus } from "@/lib/heygen";
 import { adCopy } from "@/lib/adcopy";
 import { CALLER } from "@/lib/constants";
+import { TrackLink, TrackView } from "@/components/trackview";
 
 export const dynamic = "force-dynamic";
 
@@ -38,12 +39,13 @@ export default async function SharedAd({ params }: { params: { id: string } }) {
   );
   return (
     <main className="wrap" style={{ paddingBlock: "28px 60px" }}>
+      <TrackView id={c.id} />
       <div className="panel" style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 12 }}>
         <span className="eyebrow">{c.business || CALLER.company} <span className="pill honey">✦ This service uses AI</span></span>
         <h2>{c.title}</h2>
         {c.video.url && <><video className="hive-video" src={c.video.url} poster={c.video.poster || undefined} controls playsInline /><span className="ai-tag">Made with AI</span></>}
         <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{c.text.slice(0, 900)}</p>
-        <a className="btn honey" href={`/?c=${c.id}`} style={{ justifySelf: "start" }}>See how it works →</a>
+        <TrackLink id={c.id}>See how it works →</TrackLink>
         <p className="note" style={{ margin: 0 }}>{CALLER.company} · <a href="/optout">Opt out</a></p>
       </div>
     </main>

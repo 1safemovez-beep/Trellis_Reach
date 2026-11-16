@@ -80,6 +80,16 @@ Supabase's built-in email only sends to the email on your Supabase account, and 
 1. Connect a sender in **Authentication → Emails → SMTP Settings** (Resend works well; use your qvtrellis.net address).
 2. In **Authentication → Emails → Templates → Magic Link**, add `{{ .Token }}` to the message so the email shows the 6-digit code.
 
+## Results, client approval, brand memory (added Nov 16 2026)
+
+Run `supabase/migrations/2026-11-16_elevate_tweaks.sql` once in Supabase → SQL Editor (safe to run again). Then:
+
+- **Results tab:** views, clicks, leads, won deals and income per ad. Leads that arrive from a shared ad link are tied to that ad.
+- **Client approval:** "Ask client to approve" gives a link (`/approve/<id>`). Once asked, an ad can't be set to Live or Scheduled until the client approves; the database enforces it.
+- **Brand memory:** per-client voice, do and don't notes, plus client approvals and change requests, are used by the Creator AI and the Hive judge.
+- **Build my campaign:** after the Chief interview, one tap makes an ad, a social post and an email as approval-needed drafts.
+- **Test on a real campaign:** on a Hive Challenge winner, adds it to the Library as a winner test so its results show up in Results.
+
 ## Voice
 
 The Chief has a hands-free **Start talking** mode: it asks questions out loud, listens, and fills in the profile. Hivecast visitors can tap **Talk to fill this in**, and there are mic buttons on the other writing fields. Voice uses the browser's own speech recognition, so it works in Chrome, Edge and Safari (including iPhone), but not Firefox. The first time, the browser asks for microphone permission.

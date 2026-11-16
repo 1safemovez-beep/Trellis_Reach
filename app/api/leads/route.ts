@@ -20,11 +20,12 @@ export async function POST(req: Request) {
   const source = SOURCES.includes(b.source) ? b.source : "Direct";
   const business = BUSINESSES.includes(b.business) ? b.business : "Undecided";
   const notes: string[] = [];
+  let adId: string | null = null;
   // Which shared ad or video brought them in.
   const fromAd = clean(b.fromAd, 64);
   if (/^[0-9a-f-]{36}$/i.test(fromAd)) {
     const { data: ad } = await supabaseAdmin().from("content").select("title").eq("id", fromAd).maybeSingle();
-    if (ad) notes.push(`Came from shared ad: ${ad.title} (${fromAd})`);
+    if (ad) { notes.push(`Came from shared ad: ${ad.title} (${fromAd})`); adId = fromAd; }
   }
   // Proof of consent, saved before any call can happen.
   const consentNote = (where: string) => `Consent to AI calls/texts given ${now} via ${where}: "${CALL_CONSENT_TEXT}"`;
@@ -77,7 +78,7 @@ export async function POST(req: Request) {
       consent_email: keepPosted || consent, consent_sms_calls: consent && Boolean(phone) };
   }
 
-  const { data, error } = await supabaseAdmin().from("leads").insert({ ...row, notes: notes.join("\n") || null }).select("id").single();
+  const { data, error } = await supabaseAdmin().from("leads").insert({ ...row, notes: notes.join("\n") || null, ...(adId ? { content_id: adId } : {}) }).select("id").single();
   if (error) {
     console.error("lead insert", error.message);
     return fail("We couldn't save that just now. Please try again.", 500);
